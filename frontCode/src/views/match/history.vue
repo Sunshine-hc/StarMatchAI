@@ -9,7 +9,7 @@
 
             <!-- 搜索表单 -->
             <el-form :model="queryForm" inline>
-                <el-form-item label="第一个星座">
+                <!-- <el-form-item label="第一个星座">
                     <el-select v-model="queryForm.person1Sign" placeholder="请选择" clearable>
                         <el-option v-for="sign in zodiacSigns" :key="sign" :label="sign" :value="sign" />
                     </el-select>
@@ -19,13 +19,13 @@
                     <el-select v-model="queryForm.person2Sign" placeholder="请选择" clearable>
                         <el-option v-for="sign in zodiacSigns" :key="sign" :label="sign" :value="sign" />
                     </el-select>
-                </el-form-item>
+                </el-form-item> -->
 
-                <el-form-item label="匹配分数">
+                <!-- <el-form-item label="匹配分数">
                     <el-input-number v-model="queryForm.minScore" :min="0" :max="100" placeholder="最小分数" />
                     <span class="mx-2">-</span>
                     <el-input-number v-model="queryForm.maxScore" :min="0" :max="100" placeholder="最大分数" />
-                </el-form-item>
+                </el-form-item> -->
 
                 <el-form-item label="匹配时间">
                     <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
@@ -41,7 +41,9 @@
             <!-- 数据表格 -->
             <el-table v-loading="loading" :data="tableData" style="width: 100%" border>
                 <el-table-column prop="person1Sign" label="第一个星座" width="120" />
+                <el-table-column prop="person1Birthday" label="第一个生日" width="120" />
                 <el-table-column prop="person2Sign" label="第二个星座" width="120" />
+                <el-table-column prop="person2Birthday" label="第二个生日" width="120" />
                 <el-table-column prop="matchScore" label="匹配分数" width="100">
                     <template #default="{ row }">
                         <el-tag :type="getScoreTagType(row.matchScore)">
@@ -193,6 +195,13 @@ const handleViewDetail = (row) => {
     currentDetail.value = row
     dialogVisible.value = true
 }
+
+// 添加日期格式化函数
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+};
 
 onMounted(() => {
     loadData()
