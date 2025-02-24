@@ -88,27 +88,44 @@
                     <div class="summary-section">
                         <h3 class="section-title">分析总结</h3>
                         <div class="summary-content">
-                            <div class="summary-icon">
-                                <i class="el-icon-document"></i>
+                            <div v-if="!displayContent.analysis" class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
                             </div>
-                            <p class="summary-text">{{ displayContent.analysis }}</p>
+                            <p v-else class="summary-text">{{ displayContent.analysis }}</p>
                         </div>
                     </div>
 
                     <div class="details-section">
                         <div class="detail-card">
                             <h4 class="detail-title">优势特点</h4>
-                            <p class="detail-text">{{ displayContent.advantages }}</p>
+                            <div v-if="!displayContent.advantages" class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <p v-else class="detail-text">{{ displayContent.advantages }}</p>
                         </div>
 
                         <div class="detail-card">
                             <h4 class="detail-title">潜在问题</h4>
-                            <p class="detail-text">{{ displayContent.disadvantages }}</p>
+                            <div v-if="!displayContent.disadvantages" class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <p v-else class="detail-text">{{ displayContent.disadvantages }}</p>
                         </div>
 
                         <div class="detail-card">
                             <h4 class="detail-title">相处建议</h4>
-                            <p class="detail-text">{{ displayContent.suggestions }}</p>
+                            <div v-if="!displayContent.suggestions" class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <p v-else class="detail-text">{{ displayContent.suggestions }}</p>
                         </div>
                     </div>
                 </div>
@@ -118,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch, watchEffect } from 'vue'
 import { calculateMatchStream } from '@/api/match'
 import { ElMessage } from 'element-plus'
 
@@ -145,12 +162,12 @@ const matchResult = reactive({
 })
 
 // 使用独立的 ref 来存储显示内容
-const displayContent = {
-    analysis: ref(''),
-    advantages: ref(''),
-    disadvantages: ref(''),
-    suggestions: ref('')
-};
+const displayContent = reactive({
+    analysis: '',
+    advantages: '',
+    disadvantages: '',
+    suggestions: ''
+})
 
 const matchForm = ref({
     person1Birthday: '',
@@ -178,28 +195,57 @@ const getScoreColor = computed(() => {
 })
 
 // 修改 typeWriter 函数
-const typeWriter = async (text, target, speed = 50) => {
+const typeWriter = async (text, key) => {
     let index = 0;
-    target.value = '';
-
+    
     return new Promise((resolve) => {
         const timer = setInterval(() => {
             if (index < text.length) {
-                target.value += text[index];
+                // 直接修改 displayContent 对象的对应属性
+                displayContent[key] = text.substring(0, index + 1);
                 index++;
             } else {
                 clearInterval(timer);
                 resolve();
             }
-        }, speed);
+        }, 50);
     });
 };
+
+// 监听 displayContent 的变化
+watch(() => displayContent.analysis, (newVal) => {
+    console.log('分析总结内容:', newVal)
+})
+
+watch(() => displayContent.advantages, (newVal) => {
+    console.log('优势特点内容:', newVal)
+})
+
+watch(() => displayContent.disadvantages, (newVal) => {
+    console.log('潜在问题内容:', newVal)
+})
+
+watch(() => displayContent.suggestions, (newVal) => {
+    console.log('相处建议内容:', newVal)
+})
+
+// 使用 watchEffect 来监听变化
+watchEffect(() => {
+    console.log('displayContent 发生变化:', {
+        analysis: displayContent.analysis,
+        advantages: displayContent.advantages,
+        disadvantages: displayContent.disadvantages,
+        suggestions: displayContent.suggestions
+    });
+});
 
 // 修改匹配提交函数
 const submitMatch = async () => {
     try {
         loading.value = true
         showResult.value = true
+        console.log('开始匹配计算...')
+        console.log('初始 displayContent:', displayContent)
 
         // 重置状态
         Object.assign(matchResult, {
@@ -213,14 +259,18 @@ const submitMatch = async () => {
         })
 
         // 重置显示内容
-        displayContent.analysis.value = '';
-        displayContent.advantages.value = '';
-        displayContent.disadvantages.value = '';
-        displayContent.suggestions.value = '';
+        displayContent.analysis = '';
+        displayContent.advantages = '';
+        displayContent.disadvantages = '';
+        displayContent.suggestions = '';
+        
+        console.log('重置后 displayContent:', displayContent)
 
         let hasError = false;
 
         await calculateMatchStream(matchForm.value, async (eventData) => {
+            console.log('收到事件数据:', eventData)
+            
             // 收到响应就关闭加载状态
             loading.value = false;
 
@@ -233,6 +283,7 @@ const submitMatch = async () => {
             }
 
             if (!hasError) {
+                console.log('处理事件:', eventData.event)
                 switch (eventData.event) {
                     case 'signs':
                         matchResult.person1Sign = eventData.data.person1Sign;
@@ -242,30 +293,33 @@ const submitMatch = async () => {
                         matchResult.matchScore = parseInt(eventData.data);
                         break;
                     case 'analysis':
+                        console.log('开始写入分析内容')
                         matchResult.analysis = eventData.data;
-                        await typeWriter(eventData.data, displayContent.analysis);
+                        await typeWriter(eventData.data, 'analysis');
+                        console.log('分析内容写入完成:', displayContent.analysis);
                         break;
                     case 'advantages':
                         matchResult.advantages = eventData.data;
-                        await typeWriter(eventData.data, displayContent.advantages);
+                        await typeWriter(eventData.data, 'advantages');
                         break;
                     case 'disadvantages':
                         matchResult.disadvantages = eventData.data;
-                        await typeWriter(eventData.data, displayContent.disadvantages);
+                        await typeWriter(eventData.data, 'disadvantages');
                         break;
                     case 'suggestions':
                         matchResult.suggestions = eventData.data;
-                        await typeWriter(eventData.data, displayContent.suggestions);
+                        await typeWriter(eventData.data, 'suggestions');
                         break;
                 }
             }
         });
 
         if (!hasError) {
+            console.log('匹配分析完成')
             ElMessage.success('匹配分析完成');
         }
     } catch (error) {
-        console.error('Match error:', error);
+        console.error('匹配错误:', error);
         ElMessage.error(error.message || '匹配分析失败');
         showResult.value = false;
     } finally {
@@ -742,6 +796,41 @@ const aiModelOptions = [
     100% {
         transform: translateX(100vw) translateY(100vh) rotate(45deg);
         opacity: 0;
+    }
+}
+
+/* 只添加加载动画相关样式 */
+.loading-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+}
+
+.loading-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #00FF88;
+    animation: dots 1.4s infinite;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dots {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
     }
 }
 </style>
