@@ -7,22 +7,29 @@
                 </div>
             </template>
 
-            <el-form :model="matchForm" :rules="rules" ref="matchFormRef" label-width="120px">
-                <el-form-item label="第一个人生日" prop="person1Birthday">
-                    <el-date-picker v-model="matchForm.person1Birthday" type="date" placeholder="选择日期"
-                        format="YYYY-MM-DD" value-format="YYYY-MM-DD" />
-                </el-form-item>
+            <el-form :model="matchForm" :rules="rules" ref="matchFormRef" label-width="80px">
+                <div class="form-row">
+                    <el-form-item label="生日选择" prop="person1Birthday" class="birthday-item">
+                        <el-date-picker v-model="matchForm.person1Birthday" type="date" placeholder="选择日期"
+                            format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false" style="width: 240px" />
+                        <span class="separator">×</span>
+                        <el-date-picker v-model="matchForm.person2Birthday" type="date" placeholder="选择日期"
+                            format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false" style="width: 240px" />
+                    </el-form-item>
+                </div>
 
-                <el-form-item label="第二个人生日" prop="person2Birthday">
-                    <el-date-picker v-model="matchForm.person2Birthday" type="date" placeholder="选择日期"
-                        format="YYYY-MM-DD" value-format="YYYY-MM-DD" />
-                </el-form-item>
+                <div class="form-row actions">
+                    <el-form-item label="AI模型" prop="aiModel" class="model-item">
+                        <el-select v-model="matchForm.aiModel" placeholder="请选择AI模型" style="width: 240px">
+                            <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label"
+                                :value="option.value" />
+                        </el-select>
+                    </el-form-item>
 
-                <el-form-item>
-                    <el-button type="primary" @click="submitMatch" :loading="loading">
+                    <el-button type="primary" @click="handleSubmit" :loading="loading" class="submit-button">
                         开始匹配
                     </el-button>
-                </el-form-item>
+                </div>
             </el-form>
         </el-card>
 
@@ -125,8 +132,15 @@ const matchForm = ref({
 })
 
 const rules = {
-    person1Birthday: [{ required: true, message: '请选择第一个人的生日', trigger: 'change' }],
-    person2Birthday: [{ required: true, message: '请选择第二个人的生日', trigger: 'change' }]
+    person1Birthday: [
+        { required: true, message: '请选择第一个人的生日', trigger: 'change' }
+    ],
+    person2Birthday: [
+        { required: true, message: '请选择第二个人的生日', trigger: 'change' }
+    ],
+    aiModel: [
+        { required: true, message: '请选择AI模型', trigger: 'change' }
+    ]
 }
 
 const getScoreColor = computed(() => {
@@ -154,11 +168,9 @@ const typeWriter = async (text, target, speed = 50) => {
     });
 };
 
+// 修改匹配提交函数
 const submitMatch = async () => {
-    if (!matchFormRef.value) return
-
     try {
-        await matchFormRef.value.validate()
         loading.value = true
         showResult.value = true
 
@@ -179,43 +191,78 @@ const submitMatch = async () => {
         displayContent.disadvantages.value = '';
         displayContent.suggestions.value = '';
 
-        await calculateMatchStream(matchForm.value, async (eventData) => {
+        let hasError = false;  // 添加错误标记
 
-            switch (eventData.event) {
-                case 'signs':
-                    matchResult.person1Sign = eventData.data.person1Sign;
-                    matchResult.person2Sign = eventData.data.person2Sign;
-                    break;
-                case 'score':
-                    matchResult.matchScore = parseInt(eventData.data);
-                    break;
-                case 'analysis':
-                    matchResult.analysis = eventData.data;
-                    await typeWriter(eventData.data, displayContent.analysis);
-                    break;
-                case 'advantages':
-                    matchResult.advantages = eventData.data;
-                    await typeWriter(eventData.data, displayContent.advantages);
-                    break;
-                case 'disadvantages':
-                    matchResult.disadvantages = eventData.data;
-                    await typeWriter(eventData.data, displayContent.disadvantages);
-                    break;
-                case 'suggestions':
-                    matchResult.suggestions = eventData.data;
-                    await typeWriter(eventData.data, displayContent.suggestions);
-                    break;
+        await calculateMatchStream(matchForm.value, async (eventData) => {
+            // 检查是否是错误事件
+            if (eventData.event === 'error') {
+                hasError = true;  // 设置错误标记
+                ElMessage.error(eventData.data);
+                showResult.value = false;
+                return;
+            }
+
+            if (!hasError) {  // 只有在没有错误时才处理数据
+                switch (eventData.event) {
+                    case 'signs':
+                        matchResult.person1Sign = eventData.data.person1Sign;
+                        matchResult.person2Sign = eventData.data.person2Sign;
+                        break;
+                    case 'score':
+                        matchResult.matchScore = parseInt(eventData.data);
+                        break;
+                    case 'analysis':
+                        matchResult.analysis = eventData.data;
+                        await typeWriter(eventData.data, displayContent.analysis);
+                        break;
+                    case 'advantages':
+                        matchResult.advantages = eventData.data;
+                        await typeWriter(eventData.data, displayContent.advantages);
+                        break;
+                    case 'disadvantages':
+                        matchResult.disadvantages = eventData.data;
+                        await typeWriter(eventData.data, displayContent.disadvantages);
+                        break;
+                    case 'suggestions':
+                        matchResult.suggestions = eventData.data;
+                        await typeWriter(eventData.data, displayContent.suggestions);
+                        break;
+                }
             }
         });
 
-        ElMessage.success('匹配分析完成')
+        // 只有在没有错误时才显示成功消息
+        if (!hasError) {
+            ElMessage.success('匹配分析完成');
+        }
     } catch (error) {
         console.error('Match error:', error);
-        ElMessage.error(error.message || '匹配分析失败')
+        ElMessage.error(error.message || '匹配分析失败');
+        showResult.value = false;
     } finally {
         loading.value = false
     }
 }
+
+// 修改提交处理函数
+const handleSubmit = async () => {
+    if (!matchFormRef.value) return
+
+    try {
+        // 表单验证
+        await matchFormRef.value.validate()
+        // 验证通过后调用匹配
+        await submitMatch()
+    } catch (error) {
+        console.log('表单验证失败')
+    }
+}
+
+// 修改AI模型选项，只保留支持的模型
+const aiModelOptions = [
+    { label: 'DeepSeek', value: 'deepseek' },
+    { label: '文心一言', value: 'wenxin' }
+]
 </script>
 
 <style scoped>
@@ -227,6 +274,66 @@ const submitMatch = async () => {
 
 .match-form {
     margin-bottom: 20px;
+}
+
+.form-row {
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+}
+
+.birthday-item {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+.separator {
+    margin: 0 15px;
+    color: #909399;
+    font-size: 16px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.model-item {
+    margin-bottom: 0;
+}
+
+.submit-button {
+    margin-right: 20px;
+}
+
+/* 响应式布局 */
+@media screen and (max-width: 768px) {
+    .birthday-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .separator {
+        margin: 10px 0;
+    }
+
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .submit-button {
+        margin-top: 20px;
+        margin-right: 0;
+        width: 100%;
+    }
+
+    .el-date-picker,
+    .el-select {
+        width: 100% !important;
+    }
 }
 
 .card-header {

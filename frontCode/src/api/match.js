@@ -29,9 +29,14 @@ export function calculateMatchStream(data, onProgress) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(data)
-        }).then(response => {
-            if (!response.ok) {
-                throw new Error(response.statusText);
+        }).then(async response => {
+            // 如果不是流式响应，可能是业务异常
+            const contentType = response.headers.get('Content-Type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                if (errorData.code !== 200) {
+                    throw new Error(errorData.message);
+                }
             }
 
             const reader = response.body.getReader();
