@@ -9,7 +9,7 @@
             <el-card class="match-card form-card">
                 <template #header>
                     <div class="card-header">
-                        <span>星座匹配测试</span>
+                        <span>AI星座匹配测试</span>
                     </div>
                 </template>
 
@@ -18,17 +18,17 @@
                         <el-form-item label="生日选择" required>
                             <div class="birthday-inputs">
                                 <el-form-item prop="person1Birthday" class="birthday-item" label-width="0">
-                                    <el-date-picker v-model="matchForm.person1Birthday" type="date" placeholder="选择日期"
-                                        format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false"
-                                        class="date-picker" />
+                                    <el-date-picker v-model="matchForm.person1Birthday" type="date"
+                                        placeholder="第一个人的生日" format="YYYY-MM-DD" value-format="YYYY-MM-DD"
+                                        :clearable="false" class="date-picker" />
                                 </el-form-item>
 
                                 <span class="separator">×</span>
 
                                 <el-form-item prop="person2Birthday" class="birthday-item" label-width="0">
-                                    <el-date-picker v-model="matchForm.person2Birthday" type="date" placeholder="选择日期"
-                                        format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false"
-                                        class="date-picker" />
+                                    <el-date-picker v-model="matchForm.person2Birthday" type="date"
+                                        placeholder="第二个人的生日" format="YYYY-MM-DD" value-format="YYYY-MM-DD"
+                                        :clearable="false" class="date-picker" />
                                 </el-form-item>
                             </div>
                         </el-form-item>
