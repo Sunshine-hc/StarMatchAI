@@ -88,10 +88,15 @@
                     <div class="summary-section">
                         <h3 class="section-title">分析总结</h3>
                         <div class="summary-content">
-                            <div v-if="!displayContent.analysis" class="loading-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
+                            <div v-if="!displayContent.analysis" class="loading-wrapper">
+                                <div class="loading-container">
+                                    <span class="loading-text">分析中</span>
+                                    <div class="loading-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
                             </div>
                             <p v-else class="summary-text">{{ displayContent.analysis }}</p>
                         </div>
@@ -100,30 +105,45 @@
                     <div class="details-section">
                         <div class="detail-card">
                             <h4 class="detail-title">优势特点</h4>
-                            <div v-if="!displayContent.advantages" class="loading-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
+                            <div v-if="!displayContent.advantages" class="loading-wrapper">
+                                <div class="loading-container">
+                                    <span class="loading-text">分析中</span>
+                                    <div class="loading-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
                             </div>
                             <p v-else class="detail-text">{{ displayContent.advantages }}</p>
                         </div>
 
                         <div class="detail-card">
                             <h4 class="detail-title">潜在问题</h4>
-                            <div v-if="!displayContent.disadvantages" class="loading-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
+                            <div v-if="!displayContent.disadvantages" class="loading-wrapper">
+                                <div class="loading-container">
+                                    <span class="loading-text">分析中</span>
+                                    <div class="loading-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
                             </div>
                             <p v-else class="detail-text">{{ displayContent.disadvantages }}</p>
                         </div>
 
                         <div class="detail-card">
                             <h4 class="detail-title">相处建议</h4>
-                            <div v-if="!displayContent.suggestions" class="loading-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
+                            <div v-if="!displayContent.suggestions" class="loading-wrapper">
+                                <div class="loading-container">
+                                    <span class="loading-text">分析中</span>
+                                    <div class="loading-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
                             </div>
                             <p v-else class="detail-text">{{ displayContent.suggestions }}</p>
                         </div>
@@ -801,17 +821,17 @@ const aiModelOptions = [
 
 /* 只添加加载动画相关样式 */
 .loading-dots {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    padding: 20px;
+    display: inline-flex;
+    gap: 4px;
+    height: 20px;
 }
 
 .loading-dots span {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background-color: #00FF88;
+    display: inline-block;
     animation: dots 1.4s infinite;
 }
 
@@ -832,5 +852,42 @@ const aiModelOptions = [
         opacity: 1;
         transform: scale(1.2);
     }
+}
+
+.loading-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 60px; /* 确保有足够的高度 */
+}
+
+.loading-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    /* background: rgba(0, 255, 136, 0.05); 可选：添加一个微妙的背景 */
+    border-radius: 4px;
+}
+
+.loading-text {
+    color: #00FF88;
+    font-size: 14px;
+}
+
+.loading-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.loading-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #00FF88;
+    display: inline-block;
+    animation: dots 1.4s infinite;
 }
 </style>
