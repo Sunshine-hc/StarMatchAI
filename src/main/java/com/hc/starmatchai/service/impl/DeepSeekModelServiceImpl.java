@@ -284,7 +284,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
         }
     }
 
-    private void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent)
+    void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent)
             throws IOException {
 
         // 处理匹配得分
