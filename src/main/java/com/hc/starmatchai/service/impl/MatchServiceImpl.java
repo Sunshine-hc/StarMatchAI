@@ -266,7 +266,24 @@ public class MatchServiceImpl implements MatchService {
             } catch (Exception e) {
                 log.error("流式分析异常, request={}, error={}",
                         JSONUtil.toJsonStr(request), e.getMessage(), e);
-                handleStreamError(emitter, e);
+                // 确保在异常发生时发送错误消息
+                if (emitterStatus.get(emitter)) {
+                    try {
+                        Map<String, Object> errorEvent = new HashMap<>();
+                        errorEvent.put("event", "error");
+                        errorEvent.put("data", "分析过程发生错误：" + e.getMessage());
+                        emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(errorEvent)));
+                    } catch (IOException ex) {
+                        log.error("发送错误消息失败", ex);
+                    } finally {
+                        try {
+                            emitter.complete();
+                        } catch (Exception ex) {
+                            log.error("关闭emitter失败", ex);
+                        }
+                        emitterStatus.remove(emitter);
+                    }
+                }
             }
         });
 
@@ -287,22 +304,22 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void handleStreamError(SseEmitter emitter, Exception e) {
-        try {
-            if (emitterStatus.get(emitter)) {
+        if (emitterStatus.get(emitter)) {
+            try {
                 Map<String, Object> errorEvent = new HashMap<>();
                 errorEvent.put("event", "error");
-                errorEvent.put("data", e.getMessage());
+                errorEvent.put("data", "分析过程发生错误：" + e.getMessage());
                 emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(errorEvent)));
+            } catch (IOException ex) {
+                log.error("发送错误消息失败", ex);
+            } finally {
+                try {
+                    emitter.complete();
+                } catch (Exception ex) {
+                    log.error("关闭emitter失败", ex);
+                }
+                emitterStatus.remove(emitter);
             }
-        } catch (IOException ex) {
-            log.error("发送错误消息失败", ex);
-        } finally {
-            try {
-                emitter.complete();
-            } catch (Exception ex) {
-                log.error("关闭emitter失败", ex);
-            }
-            emitterStatus.remove(emitter);
         }
     }
 
