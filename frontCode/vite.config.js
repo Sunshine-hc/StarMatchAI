@@ -11,6 +11,9 @@ export default defineConfig({
     },
     server: {
         port: 3000,
+        allowedHosts: [
+            'frp6.mmszxc.xin'
+        ],
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',
