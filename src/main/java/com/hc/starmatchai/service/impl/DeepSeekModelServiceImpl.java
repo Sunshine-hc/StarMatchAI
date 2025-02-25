@@ -82,6 +82,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "deepseek-chat");
             requestBody.put("stream", true);
+            requestBody.put("temperature", 0.7);
 
             Map<String, String> message = new HashMap<>();
             message.put("role", "user");
@@ -96,7 +97,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             // 创建OkHttp客户端
             OkHttpClient client = new OkHttpClient.Builder()
                     .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .build();
 
@@ -321,7 +322,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                 .append("和")
                 .append(sign2.getChineseName())
                 .append("的匹配关系。请严格按照以下格式输出：\n\n")
-                .append("匹配得分：[请给出0-100的匹配度评分，只需要数字]\n\n")
+                .append("匹配得分：[请给出0-100的匹配度评分，评分更细一点不要全是5的倍数，只需要数字]\n\n")
                 .append("整体分析：[从星座特质的角度分析两个星座的整体匹配程度]\n\n")
                 .append("优势特点：[分析两个星座在感情中的互补优势]\n\n")
                 .append("潜在问题：[指出可能存在的性格冲突或沟通障碍]\n\n")
