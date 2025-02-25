@@ -68,7 +68,7 @@
                     <div class="result-header">
                         <div class="zodiac-pair">
                             <div class="zodiac-item">
-                                <div class="zodiac-icon">♈</div>
+                                <div class="zodiac-icon">{{ getZodiacIcon(matchResult.person1Sign) }}</div>
                                 <div class="zodiac-name">{{ matchResult.person1Sign }}</div>
                             </div>
                             <div class="match-score">
@@ -78,7 +78,7 @@
                                 </div>
                             </div>
                             <div class="zodiac-item">
-                                <div class="zodiac-icon">♊</div>
+                                <div class="zodiac-icon">{{ getZodiacIcon(matchResult.person2Sign) }}</div>
                                 <div class="zodiac-name">{{ matchResult.person2Sign }}</div>
                             </div>
                         </div>
@@ -233,31 +233,31 @@ const typeWriter = async (text, key) => {
 };
 
 // 监听 displayContent 的变化
-watch(() => displayContent.analysis, (newVal) => {
-    console.log('分析总结内容:', newVal)
-})
+// watch(() => displayContent.analysis, (newVal) => {
+//     console.log('分析总结内容:', newVal)
+// })
 
-watch(() => displayContent.advantages, (newVal) => {
-    console.log('优势特点内容:', newVal)
-})
+// watch(() => displayContent.advantages, (newVal) => {
+//     console.log('优势特点内容:', newVal)
+// })
 
-watch(() => displayContent.disadvantages, (newVal) => {
-    console.log('潜在问题内容:', newVal)
-})
+// watch(() => displayContent.disadvantages, (newVal) => {
+//     console.log('潜在问题内容:', newVal)
+// })
 
-watch(() => displayContent.suggestions, (newVal) => {
-    console.log('相处建议内容:', newVal)
-})
+// watch(() => displayContent.suggestions, (newVal) => {
+//     console.log('相处建议内容:', newVal)
+// })
 
 // 使用 watchEffect 来监听变化
-watchEffect(() => {
-    console.log('displayContent 发生变化:', {
-        analysis: displayContent.analysis,
-        advantages: displayContent.advantages,
-        disadvantages: displayContent.disadvantages,
-        suggestions: displayContent.suggestions
-    });
-});
+// watchEffect(() => {
+//     console.log('displayContent 发生变化:', {
+//         analysis: displayContent.analysis,
+//         advantages: displayContent.advantages,
+//         disadvantages: displayContent.disadvantages,
+//         suggestions: displayContent.suggestions
+//     });
+// });
 
 // 修改匹配提交函数
 const submitMatch = async () => {
@@ -366,6 +366,27 @@ const aiModelOptions = [
     { label: 'DeepSeek', value: 'deepseek' },
     { label: '文心一言', value: 'wenxin' }
 ]
+
+// 添加星座图标映射
+const zodiacIcons = {
+    '白羊座': '♈',
+    '金牛座': '♉',
+    '双子座': '♊',
+    '巨蟹座': '♋',
+    '狮子座': '♌',
+    '处女座': '♍',
+    '天秤座': '♎',
+    '天蝎座': '♏',
+    '射手座': '♐',
+    '摩羯座': '♑',
+    '水瓶座': '♒',
+    '双鱼座': '♓'
+}
+
+// 获取星座图标的方法
+const getZodiacIcon = (signName) => {
+    return zodiacIcons[signName] || '⭐'; // 如果找不到对应图标，返回默认星星
+}
 </script>
 
 <style scoped>
