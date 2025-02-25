@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentHashMap;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -41,6 +43,8 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
     @Value("${ai.deepseek.api-url}")
     private String apiUrl;
+
+    private final ConcurrentHashMap<SseEmitter, AtomicBoolean> emitterStatusMap = new ConcurrentHashMap<>();
 
     @Override
     public Map<String, String> getMatchAnalysis(ZodiacSign sign1, ZodiacSign sign2) {
@@ -68,6 +72,29 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
     @Override
     public void getMatchAnalysisStream(ZodiacSign sign1, ZodiacSign sign2, SseEmitter emitter) {
+        // 初始化emitter状态为活跃
+        AtomicBoolean isActive = new AtomicBoolean(true);
+        emitterStatusMap.put(emitter, isActive);
+
+        // 添加完成、超时和错误处理器
+        emitter.onCompletion(() -> {
+            log.info("SSE连接已完成");
+            isActive.set(false);
+            emitterStatusMap.remove(emitter);
+        });
+
+        emitter.onTimeout(() -> {
+            log.info("SSE连接超时");
+            isActive.set(false);
+            emitterStatusMap.remove(emitter);
+        });
+
+        emitter.onError(ex -> {
+            log.error("SSE连接发生错误: {}", ex.getMessage());
+            isActive.set(false);
+            emitterStatusMap.remove(emitter);
+        });
+
         try {
             // 发送开始事件
             Map<String, Object> startEvent = new HashMap<>();
@@ -116,14 +143,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     log.error("DeepSeek API请求失败", e);
-                    try {
-                        Map<String, Object> errorEvent = new HashMap<>();
-                        errorEvent.put("event", "error");
-                        errorEvent.put("data", "AI服务调用失败，请稍后重试");
-                        emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(errorEvent)));
-                    } catch (IOException ex) {
-                        log.error("发送错误事件失败", ex);
-                    }
+                    safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
                 }
 
                 @Override
@@ -210,11 +230,8 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                         log.info("结束处理流式响应");
                     }
 
-                    // 发送完成事件
-                    Map<String, Object> completeEvent = new HashMap<>();
-                    completeEvent.put("event", "complete");
-                    completeEvent.put("data", "分析完成");
-                    emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(completeEvent)));
+                    // 在处理完成后，安全地发送完成事件
+                    safelySendEvent(emitter, "complete", "分析完成");
                 }
 
                 // 优化processFullContent方法
@@ -293,7 +310,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
                         if (!sectionText.isEmpty()) {
                             // 简化清理过程
-//                            sectionText = sectionText.replace("**", "").replace("  ", " ").trim();
+                            // sectionText = sectionText.replace("**", "").replace(" ", " ").trim();
                             sectionText = cleanContent(sectionText);
                             sendAnalysisSection(emitter, eventType, sectionText);
                             sectionsSent[index] = true;
@@ -304,14 +321,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
         } catch (Exception e) {
             log.error("DeepSeek API流式请求异常: {}", e.getMessage(), e);
-            try {
-                Map<String, Object> errorEvent = new HashMap<>();
-                errorEvent.put("event", "error");
-                errorEvent.put("data", "AI服务调用失败，请稍后重试");
-                emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(errorEvent)));
-            } catch (IOException ex) {
-                log.error("发送错误事件失败", ex);
-            }
+            safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
         }
     }
 
@@ -429,14 +439,67 @@ public class DeepSeekModelServiceImpl implements AIModelService {
         }
     }
 
-    private void sendAnalysisSection(SseEmitter emitter, String key, String content)
-            throws IOException {
-        if (!StrUtil.isBlank(content)) {
-            log.info("发送分析部分: key={}, content={}", key, content);
-            Map<String, Object> eventData = new HashMap<>();
-            eventData.put("event", key);
-            eventData.put("data", content);
-            emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(eventData)));
+    /**
+     * 安全地发送SSE事件
+     * 
+     * @param emitter   SSE发射器
+     * @param eventType 事件类型
+     * @param data      事件数据
+     */
+    private void safelySendEvent(SseEmitter emitter, String eventType, String data) {
+        AtomicBoolean isActive = emitterStatusMap.getOrDefault(emitter, new AtomicBoolean(false));
+
+        if (isActive.get()) {
+            try {
+                Map<String, Object> event = new HashMap<>();
+                event.put("event", eventType);
+                event.put("data", data);
+
+                emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(event)));
+
+                // 如果是完成事件，标记emitter为非活跃并完成
+                if ("complete".equals(eventType)) {
+                    isActive.set(false);
+                    emitter.complete();
+                    emitterStatusMap.remove(emitter);
+                }
+            } catch (Exception e) {
+                log.warn("发送{}事件失败: {}", eventType, e.getMessage());
+                try {
+                    // 尝试完成emitter
+                    isActive.set(false);
+                    emitter.complete();
+                } catch (Exception ex) {
+                    // 忽略完成时的异常
+                } finally {
+                    emitterStatusMap.remove(emitter);
+                }
+            }
+        } else {
+            log.debug("跳过向非活跃emitter发送{}事件", eventType);
+        }
+    }
+
+    /**
+     * 安全地发送分析部分
+     */
+    private void sendAnalysisSection(SseEmitter emitter, String key, String content) {
+        if (StrUtil.isBlank(content)) {
+            return;
+        }
+
+        AtomicBoolean isActive = emitterStatusMap.getOrDefault(emitter, new AtomicBoolean(false));
+        if (isActive.get()) {
+            try {
+                log.info("发送分析部分: key={}, content={}", key, content);
+                Map<String, Object> eventData = new HashMap<>();
+                eventData.put("event", key);
+                eventData.put("data", content);
+                emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(eventData)));
+            } catch (Exception e) {
+                log.warn("发送分析部分失败: {}", e.getMessage());
+                isActive.set(false);
+            }
         }
     }
 
