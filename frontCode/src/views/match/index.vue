@@ -73,8 +73,15 @@
                             </div>
                             <div class="match-score">
                                 <div class="score-circle">
-                                    {{ matchResult.matchScore }}
-                                    <span class="score-unit">%</span>
+                                    <div class="water-container">
+                                        <div class="water" :style="{ height: matchResult.matchScore + '%' }">
+                                            <div class="water-surface"></div>
+                                        </div>
+                                    </div>
+                                    <div class="score-text">
+                                        {{ matchResult.matchScore }}
+                                        <span class="score-unit">%</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="zodiac-item">
@@ -595,7 +602,7 @@ const getZodiacIcon = (signName) => {
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #00FF88, #00CC88);
+    background: rgba(42, 47, 79, 0.9);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -603,11 +610,83 @@ const getZodiacIcon = (signName) => {
     font-size: 32px;
     color: #FFFFFF;
     box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 水容器 */
+.water-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* 水效果 - 调整颜色更接近图片 */
+.water {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 220, 120, 0.8);
+    transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 水面波浪效果 - 降低高度和波动幅度 */
+.water-surface {
+    position: absolute;
+    top: -5px; /* 从-10px改为-5px，降低高度 */
+    left: 0;
+    width: 100%;
+    height: 10px; /* 从20px改为10px，降低高度 */
+    background: rgba(0, 220, 120, 0.8);
+    border-radius: 50%;
+    animation: water-ripple 2s ease-in-out infinite alternate;
+}
+
+/* 水面荡漾动画 - 减小波动幅度 */
+@keyframes water-ripple {
+    0% {
+        transform: scale(1, 1) translateY(0);
+        border-radius: 50% 50% 25% 25% / 50% 50% 25% 25%;
+    }
+    50% {
+        transform: scale(1.03, 0.97) translateY(1px); /* 减小变形幅度 */
+        border-radius: 25% 25% 50% 50% / 25% 25% 50% 50%;
+    }
+    100% {
+        transform: scale(0.97, 1.03) translateY(-1px); /* 减小变形幅度 */
+        border-radius: 50% 50% 25% 25% / 50% 50% 25% 25%;
+    }
+}
+
+/* 分数文字 - 优化居中 */
+.score-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    text-align: center;
+    line-height: 1; /* 添加行高确保垂直居中 */
+    margin-top: 0; /* 移除可能的边距 */
+    padding: 0; /* 移除可能的内边距 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
 }
 
 .score-unit {
     font-size: 16px;
     margin-left: 2px;
+    vertical-align: middle; /* 确保单位与数字对齐 */
 }
 
 .result-content {
