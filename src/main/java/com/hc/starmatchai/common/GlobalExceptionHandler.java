@@ -1,8 +1,14 @@
 package com.hc.starmatchai.common;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.validation.BindException;
@@ -16,14 +22,17 @@ import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,49 +40,116 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
-     * 业务异常
+     * 处理业务异常
      */
     @ExceptionHandler(BusinessException.class)
-    public Result<Void> handleBusinessException(BusinessException e) {
+    public Result<?> handleBusinessException(BusinessException e, HttpServletResponse response) {
         log.error("业务异常: {}", e.getMessage());
+        // 根据异常中的状态码设置HTTP响应状态
+        if (e.getCode() != null) {
+            response.setStatus(e.getCode());
+        }
         return Result.error(e.getCode(), e.getMessage());
     }
 
     /**
-     * 请求参数校验异常（@Valid）
+     * 处理JWT过期异常
      */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) // 401
+    @ExceptionHandler(ExpiredJwtException.class)
+    public Result<?> handleExpiredJwtException(ExpiredJwtException e) {
+        log.error("JWT已过期: {}", e.getMessage());
+        return Result.error(HttpStatus.UNAUTHORIZED.value(), "登录已过期，请重新登录");
+    }
+
+    /**
+     * 处理JWT签名异常
+     */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) // 401
+    @ExceptionHandler(SignatureException.class)
+    public Result<?> handleSignatureException(SignatureException e) {
+        log.error("JWT签名验证失败: {}", e.getMessage());
+        return Result.error(HttpStatus.UNAUTHORIZED.value(), "无效的身份验证令牌");
+    }
+
+    /**
+     * 处理JWT格式异常
+     */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) // 401
+    @ExceptionHandler(MalformedJwtException.class)
+    public Result<?> handleMalformedJwtException(MalformedJwtException e) {
+        log.error("JWT格式错误: {}", e.getMessage());
+        return Result.error(HttpStatus.UNAUTHORIZED.value(), "无效的身份验证令牌格式");
+    }
+
+    /**
+     * 处理不支持的JWT异常
+     */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) // 401
+    @ExceptionHandler(UnsupportedJwtException.class)
+    public Result<?> handleUnsupportedJwtException(UnsupportedJwtException e) {
+        log.error("不支持的JWT: {}", e.getMessage());
+        return Result.error(HttpStatus.UNAUTHORIZED.value(), "不支持的身份验证令牌");
+    }
+
+    /**
+     * 处理其他JWT异常
+     */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) // 401
+    @ExceptionHandler(JwtException.class)
+    public Result<?> handleJwtException(JwtException e) {
+        log.error("JWT异常: {}", e.getMessage());
+        return Result.error(HttpStatus.UNAUTHORIZED.value(), "身份验证失败，请重新登录");
+    }
+
+    /**
+     * 处理参数校验异常
+     */
+    @ResponseStatus(HttpStatus.BAD_REQUEST) // 400
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
+    public Result<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         BindingResult bindingResult = e.getBindingResult();
-        String message = bindingResult.getFieldErrors().stream()
+        List<FieldError> fieldErrors = bindingResult.getFieldErrors();
+        String message = fieldErrors.stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         log.error("参数校验异常: {}", message);
-        return Result.error(400, message);
+        return Result.error(HttpStatus.BAD_REQUEST.value(), message);
     }
 
     /**
-     * 请求参数绑定异常
+     * 处理绑定异常
      */
+    @ResponseStatus(HttpStatus.BAD_REQUEST) // 400
     @ExceptionHandler(BindException.class)
-    public Result<Void> handleBindException(BindException e) {
-        String message = e.getBindingResult().getFieldErrors().stream()
+    public Result<?> handleBindException(BindException e) {
+        BindingResult bindingResult = e.getBindingResult();
+        List<FieldError> fieldErrors = bindingResult.getFieldErrors();
+        String message = fieldErrors.stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
-        log.error("参数绑定异常: {}", message);
-        return Result.error(400, message);
+        log.error("绑定异常: {}", message);
+        return Result.error(HttpStatus.BAD_REQUEST.value(), message);
     }
 
     /**
-     * 参数校验异常
+     * 处理未授权异常
      */
-    @ExceptionHandler(ConstraintViolationException.class)
-    public Result<Void> handleConstraintViolationException(ConstraintViolationException e) {
-        String message = e.getConstraintViolations().stream()
-                .map(ConstraintViolation::getMessage)
-                .collect(Collectors.joining(", "));
-        log.error("参数校验异常: {}", message);
-        return Result.error(400, message);
+    @ResponseStatus(HttpStatus.FORBIDDEN) // 403
+    @ExceptionHandler(SecurityException.class)
+    public Result<?> handleSecurityException(SecurityException e) {
+        log.error("安全异常: {}", e.getMessage());
+        return Result.error(HttpStatus.FORBIDDEN.value(), "没有权限执行此操作");
+    }
+
+    /**
+     * 处理所有其他异常
+     */
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // 500
+    @ExceptionHandler(Exception.class)
+    public Result<?> handleException(Exception e) {
+        log.error("系统异常", e);
+        return Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "系统异常，请联系管理员");
     }
 
     /**
@@ -203,11 +279,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 其他未处理的异常
+     * 参数校验异常
      */
-    @ExceptionHandler(Exception.class)
-    public Result<Void> handleException(Exception e) {
-        log.error("系统异常: ", e);
-        return Result.error(500, "系统异常，请稍后重试");
+    @ExceptionHandler(ConstraintViolationException.class)
+    public Result<Void> handleConstraintViolationException(ConstraintViolationException e) {
+        String message = e.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining(", "));
+        log.error("参数校验异常: {}", message);
+        return Result.error(400, message);
     }
 }

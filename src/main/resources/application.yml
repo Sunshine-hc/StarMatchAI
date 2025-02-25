@@ -35,6 +35,25 @@ spring:
         # 连接池中的最小空闲连接
         min-idle: 0
 
+  # 邮件配置
+  mail:
+    # 替换为您的SMTP服务器
+    host: smtp.qq.com
+    # SMTP端口，通常是25、465或587
+    port: 587
+    # 您的邮箱地址
+    username: 2228119041@qq.com
+    # 您的邮箱密码或应用专用密码
+    password: ohrnwlklosuheaad
+#    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
 # MyBatis Plus配置
 mybatis-plus:
   mapper-locations: classpath:/mapper/*Mapper.xml
@@ -63,4 +82,9 @@ knife4j:
 ai:
   deepseek:
     api-key: sk-d297b700f7b749b58b6e8ad0eb4b31bb
-    api-url: https://api.deepseek.com/v1/chat/completions 
+    api-url: https://api.deepseek.com/v1/chat/completions
+
+jwt:
+  secret: sCcyqX4EP5OQc6T/dBhRiCKcx6H4IFwMicTOFs1/3to=
+  expiration: 86400000  # 24小时，单位毫秒
+

@@ -26,7 +26,8 @@ export function calculateMatchStream(data, onProgress) {
         fetch(import.meta.env.VITE_API_BASE_URL + '/starMatchAI/match/calculate/stream', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify(data)
         }).then(async response => {

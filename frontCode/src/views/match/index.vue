@@ -409,6 +409,7 @@ const getZodiacIcon = (signName) => {
     align-items: flex-start;
     /* 改为顶部对齐 */
     justify-content: center;
+    padding-top: 20px; /* 为header下方添加一些空间 */
 }
 
 .content-wrapper {

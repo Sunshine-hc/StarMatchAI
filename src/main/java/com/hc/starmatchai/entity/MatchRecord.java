@@ -16,6 +16,9 @@ public class MatchRecord {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    @Schema(description = "用户ID")
+    private Long userId;
+
     @Schema(description = "第一个人的生日")
     @DateTimeFormat(style = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
