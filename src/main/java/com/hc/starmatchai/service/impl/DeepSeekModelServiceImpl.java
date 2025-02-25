@@ -15,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,16 +69,20 @@ public class DeepSeekModelServiceImpl implements AIModelService {
     @Override
     public void getMatchAnalysisStream(ZodiacSign sign1, ZodiacSign sign2, SseEmitter emitter) {
         try {
+            // 发送开始事件
+            Map<String, Object> startEvent = new HashMap<>();
+            startEvent.put("event", "start");
+            startEvent.put("data", "开始分析");
+            emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(startEvent)));
+
+            log.info("开始进行星座匹配分析, sign1={}, sign2={}", sign1.getChineseName(), sign2.getChineseName());
             String prompt = buildPrompt(sign1, sign2);
-            log.info("开始调用DeepSeek API进行流式分析, prompt={}", prompt);
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", "deepseek-chat");
             requestBody.put("stream", true);
-            requestBody.put("temperature", 0.7);
 
-            // 构建消息
             Map<String, String> message = new HashMap<>();
             message.put("role", "user");
             message.put("content", prompt);
@@ -87,12 +92,11 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             requestBody.put("messages", messages);
 
             String requestJson = JSONUtil.toJsonStr(requestBody);
-            log.info("DeepSeek API请求参数: {}", requestJson);
 
-            // 使用OkHttp进行流式请求
+            // 创建OkHttp客户端
             OkHttpClient client = new OkHttpClient.Builder()
                     .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .build();
 
@@ -102,20 +106,28 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                     .header("Authorization", "Bearer " + apiKey)
                     .build();
 
-            log.info("发送DeepSeek API请求");
-
-            StringBuilder fullContent = new StringBuilder();
-            boolean[] sectionsSent = new boolean[5]; // 用于标记各个部分是否已发送
+            // 创建用于累积内容的StringBuilder
+            final StringBuilder fullContent = new StringBuilder(2048);
+            // 用于标记各部分是否已发送
+            final boolean[] sectionsSent = new boolean[5];
 
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     log.error("DeepSeek API请求失败", e);
-                    throw new BusinessException("AI服务调用失败");
+                    try {
+                        Map<String, Object> errorEvent = new HashMap<>();
+                        errorEvent.put("event", "error");
+                        errorEvent.put("data", "AI服务调用失败，请稍后重试");
+                        emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(errorEvent)));
+                    } catch (IOException ex) {
+                        log.error("发送错误事件失败", ex);
+                    }
                 }
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
+                    log.info("开始处理流式响应");
                     if (!response.isSuccessful()) {
                         throw new BusinessException("AI服务调用失败: " + response.code());
                     }
@@ -126,34 +138,75 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                         }
 
                         BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(responseBody.byteStream()));
+                                new InputStreamReader(responseBody.byteStream(), StandardCharsets.UTF_8), 8192);
+
+                        // 预定义关键标记，避免重复创建字符串
+                        final String SCORE_MARKER = "匹配得分：";
+                        final String ANALYSIS_MARKER = "整体分析：";
+                        final String ADVANTAGES_MARKER = "优势特点：";
+                        final String DISADVANTAGES_MARKER = "潜在问题：";
+                        final String SUGGESTIONS_MARKER = "相处建议：";
 
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            if (line.startsWith("data: ")) {
-                                String data = line.substring(6).trim();
+                            if (!line.startsWith("data: ")) {
+                                continue; // 快速跳过非数据行
+                            }
 
-                                if ("[DONE]".equals(data)) {
-                                    // 处理最后一部分内容
-                                    processFullContent(fullContent.toString(), emitter, sectionsSent);
-                                    break;
-                                }
+                            String data = line.substring(6).trim();
 
+                            // 快速检查是否完成
+                            if ("[DONE]".equals(data)) {
+                                // 处理最后一部分内容
+                                processFullContent(fullContent.toString(), emitter, sectionsSent);
+                                break;
+                            }
+
+                            // 快速检查是否包含content字段，避免不必要的JSON解析
+                            if (data.indexOf("\"content\"") == -1) {
+                                continue;
+                            }
+
+                            try {
+                                // 使用JSONUtil解析，保持与原代码兼容
                                 JSONObject chunk = JSONUtil.parseObj(data);
-                                JSONObject choices = chunk.getJSONArray("choices").getJSONObject(0);
-                                JSONObject delta = choices.getJSONObject("delta");
+                                String content = chunk.getJSONArray("choices")
+                                        .getJSONObject(0)
+                                        .getJSONObject("delta")
+                                        .getStr("content", "");
 
-                                if (delta.containsKey("content")) {
-                                    String content = delta.getStr("content");
+                                if (content != null && !content.isEmpty()) {
                                     fullContent.append(content);
 
-                                    // 当收集到完整的段落时进行处理
-                                    if (content.contains("\n\n")) {
-                                        processFullContent(fullContent.toString(), emitter, sectionsSent);
+                                    // 只有在内容中包含关键标记时才处理
+                                    boolean shouldProcess = content.indexOf("\n\n") != -1 ||
+                                            content.indexOf(SCORE_MARKER) != -1 ||
+                                            content.indexOf(ANALYSIS_MARKER) != -1 ||
+                                            content.indexOf(ADVANTAGES_MARKER) != -1 ||
+                                            content.indexOf(DISADVANTAGES_MARKER) != -1 ||
+                                            content.indexOf(SUGGESTIONS_MARKER) != -1;
+
+                                    if (shouldProcess) {
+                                        // 检查是否所有部分都已处理，如果是则跳过
+                                        boolean allProcessed = true;
+                                        for (boolean sent : sectionsSent) {
+                                            if (!sent) {
+                                                allProcessed = false;
+                                                break;
+                                            }
+                                        }
+
+                                        if (!allProcessed) {
+                                            processFullContent(fullContent.toString(), emitter, sectionsSent);
+                                        }
                                     }
                                 }
+                            } catch (Exception e) {
+                                // 简化错误日志，减少开销
+                                log.error("解析错误: {}", e.getMessage());
                             }
                         }
+                        log.info("结束处理流式响应");
                     }
 
                     // 发送完成事件
@@ -162,11 +215,102 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                     completeEvent.put("data", "分析完成");
                     emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(completeEvent)));
                 }
+
+                // 优化processFullContent方法
+                void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent)
+                        throws IOException {
+
+                    // 预定义关键标记
+                    final String SCORE_MARKER = "匹配得分：";
+                    final String ANALYSIS_MARKER = "整体分析：";
+                    final String ADVANTAGES_MARKER = "优势特点：";
+                    final String DISADVANTAGES_MARKER = "潜在问题：";
+                    final String SUGGESTIONS_MARKER = "相处建议：";
+
+                    // 处理匹配得分
+                    if (!sectionsSent[0]) {
+                        int scoreIndex = content.indexOf(SCORE_MARKER);
+                        if (scoreIndex >= 0) {
+                            int scoreStart = scoreIndex + SCORE_MARKER.length();
+                            int scoreEnd = content.indexOf('\n', scoreStart);
+                            if (scoreEnd > scoreStart) {
+                                String scoreStr = content.substring(scoreStart, scoreEnd).trim();
+                                // 使用更高效的方式提取数字
+                                StringBuilder sb = new StringBuilder();
+                                for (int i = 0; i < scoreStr.length(); i++) {
+                                    char c = scoreStr.charAt(i);
+                                    if (c >= '0' && c <= '9') {
+                                        sb.append(c);
+                                    }
+                                }
+                                scoreStr = sb.toString();
+
+                                if (!scoreStr.isEmpty()) {
+                                    sendAnalysisSection(emitter, "score", scoreStr);
+                                    sectionsSent[0] = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // 处理整体分析
+                    if (!sectionsSent[1]) {
+                        processSection(content, ANALYSIS_MARKER, "analysis", 1, emitter, sectionsSent);
+                    }
+
+                    // 处理优势特点
+                    if (!sectionsSent[2]) {
+                        processSection(content, ADVANTAGES_MARKER, "advantages", 2, emitter, sectionsSent);
+                    }
+
+                    // 处理潜在问题
+                    if (!sectionsSent[3]) {
+                        processSection(content, DISADVANTAGES_MARKER, "disadvantages", 3, emitter, sectionsSent);
+                    }
+
+                    // 处理相处建议
+                    if (!sectionsSent[4]) {
+                        processSection(content, SUGGESTIONS_MARKER, "suggestions", 4, emitter, sectionsSent);
+                    }
+                }
+
+                // 提取公共处理逻辑，减少代码重复
+                private void processSection(String content, String marker, String eventType, int index,
+                        SseEmitter emitter, boolean[] sectionsSent) throws IOException {
+                    int sectionIndex = content.indexOf(marker);
+                    if (sectionIndex >= 0) {
+                        int sectionStart = sectionIndex + marker.length();
+                        int sectionEnd = content.indexOf("\n\n", sectionStart);
+
+                        String sectionText;
+                        if (sectionEnd > sectionStart) {
+                            sectionText = content.substring(sectionStart, sectionEnd).trim();
+                        } else {
+                            // 对于最后一部分，可能没有结束标记
+                            sectionText = content.substring(sectionStart).trim();
+                        }
+
+                        if (!sectionText.isEmpty()) {
+                            // 简化清理过程
+//                            sectionText = sectionText.replace("**", "").replace("  ", " ").trim();
+                            sectionText = cleanContent(sectionText);
+                            sendAnalysisSection(emitter, eventType, sectionText);
+                            sectionsSent[index] = true;
+                        }
+                    }
+                }
             });
 
         } catch (Exception e) {
-            log.error("DeepSeek API流式请求异常", e);
-            throw new BusinessException("AI服务调用失败");
+            log.error("DeepSeek API流式请求异常: {}", e.getMessage(), e);
+            try {
+                Map<String, Object> errorEvent = new HashMap<>();
+                errorEvent.put("event", "error");
+                errorEvent.put("data", "AI服务调用失败，请稍后重试");
+                emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(errorEvent)));
+            } catch (IOException ex) {
+                log.error("发送错误事件失败", ex);
+            }
         }
     }
 
@@ -281,75 +425,6 @@ public class DeepSeekModelServiceImpl implements AIModelService {
         if (!result.containsKey("suggestions")) {
             log.warn("未解析到相处建议，使用默认值");
             result.put("suggestions", "暂无建议");
-        }
-    }
-
-    void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent)
-            throws IOException {
-
-        // 处理匹配得分
-        if (content.contains("匹配得分：") && !sectionsSent[0]) {
-            String[] parts = content.split("匹配得分：", 2);
-            if (parts.length > 1) {
-                String scoreStr = parts[1].split("\n")[0].trim().replaceAll("[^0-9]", "");
-                if (!StrUtil.isBlank(scoreStr)) {
-                    // 清理内容中的星号
-                    scoreStr = cleanContent(scoreStr);
-                    sendAnalysisSection(emitter, "score", scoreStr);
-                    sectionsSent[0] = true;
-                }
-            }
-        }
-
-        // 处理整体分析
-        if (content.contains("整体分析：") && !sectionsSent[1]) {
-            String[] parts = content.split("整体分析：", 2);
-            if (parts.length > 1 && parts[1].contains("\n\n")) {
-                String analysis = parts[1].substring(0, parts[1].indexOf("\n\n")).trim();
-                // 清理内容中的星号
-                analysis = cleanContent(analysis);
-                sendAnalysisSection(emitter, "analysis", analysis);
-                sectionsSent[1] = true;
-            }
-        }
-
-        // 处理优势特点
-        if (content.contains("优势特点：") && !sectionsSent[2]) {
-            String[] parts = content.split("优势特点：", 2);
-            if (parts.length > 1 && parts[1].contains("\n\n")) {
-                String advantages = parts[1].substring(0, parts[1].indexOf("\n\n")).trim();
-                // 清理内容中的星号
-                advantages = cleanContent(advantages);
-                sendAnalysisSection(emitter, "advantages", advantages);
-                sectionsSent[2] = true;
-            }
-        }
-
-        // 处理潜在问题
-        if (content.contains("潜在问题：") && !sectionsSent[3]) {
-            String[] parts = content.split("潜在问题：", 2);
-            if (parts.length > 1 && parts[1].contains("\n\n")) {
-                String disadvantages = parts[1].substring(0, parts[1].indexOf("\n\n")).trim();
-                // 清理内容中的星号
-                disadvantages = cleanContent(disadvantages);
-                sendAnalysisSection(emitter, "disadvantages", disadvantages);
-                sectionsSent[3] = true;
-            }
-        }
-
-        // 处理相处建议
-        if (content.contains("相处建议：") && !sectionsSent[4]) {
-            String[] parts = content.split("相处建议：", 2);
-            if (parts.length > 1) {
-                String suggestions = parts[1].trim();
-                if (suggestions.contains("\n\n")) {
-                    suggestions = suggestions.substring(0, suggestions.indexOf("\n\n"));
-                }
-                // 清理内容中的星号
-                suggestions = cleanContent(suggestions);
-                sendAnalysisSection(emitter, "suggestions", suggestions);
-                sectionsSent[4] = true;
-            }
         }
     }
 
