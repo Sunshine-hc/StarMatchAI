@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -89,9 +91,14 @@ public class MatchRecordServiceImpl implements MatchRecordService {
         // 创建分页对象
         Page<MatchRecord> page = new Page<>(pageNum, pageSize);
 
+        // 计算30天前的时间
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        Date thirtyDaysAgoDate = Date.from(thirtyDaysAgo.atZone(ZoneId.systemDefault()).toInstant());
+
         // 使用Lambda表达式创建查询条件
         LambdaQueryWrapper<MatchRecord> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(MatchRecord::getUserId, userId)
+                .ge(MatchRecord::getCreatedAt, thirtyDaysAgoDate) // 只查询30天内的数据
                 .orderByDesc(MatchRecord::getCreatedAt);
 
         // 执行分页查询

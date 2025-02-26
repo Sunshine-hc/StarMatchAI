@@ -40,12 +40,12 @@ const routes = [
                 component: () => import('../views/home/index.vue'),
                 meta: { title: '首页', requiresAuth: true }
             },
-            {
-                path: 'match/history',
-                name: 'MatchHistory',
-                component: () => import('../views/match/history.vue'),
-                meta: { title: '匹配历史', requiresAuth: true }
-            },
+            // {
+            //     path: 'match/history',
+            //     name: 'MatchHistory',
+            //     component: () => import('../views/match/history.vue'),
+            //     meta: { title: '匹配历史', requiresAuth: true }
+            // },
             {
                 path: 'match/create',
                 name: 'CreateMatch',

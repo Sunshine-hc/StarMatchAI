@@ -22,7 +22,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private static final List<String> INCLUDE_PATHS = Collections.unmodifiableList(Arrays.asList(
             "/user/**",
             "/api/**",
-            "/starMatchAI/match/**"
+            "/starMatchAI/match/**",
+            "/starMatchAI/match-record/**"
             // 添加其他需要拦截的路径
     ));
 

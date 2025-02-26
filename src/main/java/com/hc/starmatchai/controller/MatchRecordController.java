@@ -15,7 +15,7 @@ import java.util.List;
 
 @Tag(name = "星座匹配记录", description = "星座匹配记录的创建、查询和管理")
 @RestController
-@RequestMapping("/api/match-record")
+@RequestMapping("/starMatchAI/match-record")
 @RequiredArgsConstructor
 public class MatchRecordController {
 
