@@ -1,4 +1,4 @@
-package com.hc.starmatchai.common.controller;
+package com.hc.starmatchai.controller;
 
 import cn.hutool.json.JSONUtil;
 import com.hc.starmatchai.common.result.PageResult;

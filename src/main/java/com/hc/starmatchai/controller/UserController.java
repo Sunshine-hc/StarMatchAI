@@ -1,4 +1,4 @@
-package com.hc.starmatchai.common.controller;
+package com.hc.starmatchai.controller;
 
 import com.hc.starmatchai.common.result.Result;
 import com.hc.starmatchai.common.dto.EmailVerifyDTO;
