@@ -30,6 +30,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private static final List<String> EXCLUDE_PATHS = Collections.unmodifiableList(Arrays.asList(
             "/user/login",
             "/user/register",
+            "/user/send-code",
             "/api/public/**",
             "/public/**"));
 
