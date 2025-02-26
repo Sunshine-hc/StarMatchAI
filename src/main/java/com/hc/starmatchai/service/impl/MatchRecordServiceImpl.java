@@ -2,13 +2,13 @@ package com.hc.starmatchai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.hc.starmatchai.common.BusinessException;
-import com.hc.starmatchai.dto.MatchRecordDTO;
+import com.hc.starmatchai.common.exception.BusinessException;
+import com.hc.starmatchai.common.dto.MatchRecordDTO;
 import com.hc.starmatchai.entity.MatchRecord;
 import com.hc.starmatchai.mapper.MatchRecordMapper;
 import com.hc.starmatchai.service.MatchRecordService;
-import com.hc.starmatchai.util.UserContext;
-import com.hc.starmatchai.vo.MatchRecordVO;
+import com.hc.starmatchai.common.util.UserContext;
+import com.hc.starmatchai.common.vo.MatchRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;

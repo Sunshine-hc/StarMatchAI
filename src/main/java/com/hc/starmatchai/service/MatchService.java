@@ -1,10 +1,10 @@
 package com.hc.starmatchai.service;
 
-import com.hc.starmatchai.common.PageResult;
+import com.hc.starmatchai.common.result.PageResult;
 import com.hc.starmatchai.entity.MatchRecord;
-import com.hc.starmatchai.model.MatchRequest;
-import com.hc.starmatchai.model.MatchResult;
-import com.hc.starmatchai.model.dto.MatchHistoryQueryDTO;
+import com.hc.starmatchai.common.dto.model.MatchRequest;
+import com.hc.starmatchai.common.dto.model.MatchResult;
+import com.hc.starmatchai.common.dto.MatchHistoryQueryDTO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 public interface MatchService {

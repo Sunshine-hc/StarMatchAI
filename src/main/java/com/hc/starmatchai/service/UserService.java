@@ -1,9 +1,9 @@
 package com.hc.starmatchai.service;
 
 
-import com.hc.starmatchai.dto.UserLoginDTO;
-import com.hc.starmatchai.dto.UserRegisterDTO;
-import com.hc.starmatchai.vo.UserVO;
+import com.hc.starmatchai.common.dto.UserLoginDTO;
+import com.hc.starmatchai.common.dto.UserRegisterDTO;
+import com.hc.starmatchai.common.vo.UserVO;
 
 public interface UserService {
     /**

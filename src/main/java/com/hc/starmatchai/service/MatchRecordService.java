@@ -1,7 +1,7 @@
 package com.hc.starmatchai.service;
 
-import com.hc.starmatchai.dto.MatchRecordDTO;
-import com.hc.starmatchai.vo.MatchRecordVO;
+import com.hc.starmatchai.common.dto.MatchRecordDTO;
+import com.hc.starmatchai.common.vo.MatchRecordVO;
 
 import java.util.List;
 

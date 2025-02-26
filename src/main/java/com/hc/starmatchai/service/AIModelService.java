@@ -1,7 +1,7 @@
 package com.hc.starmatchai.service;
 
 import cn.hutool.json.JSONUtil;
-import com.hc.starmatchai.model.ZodiacSign;
+import com.hc.starmatchai.common.dto.model.ZodiacSign;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Map;
 import java.io.IOException;
