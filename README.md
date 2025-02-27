@@ -3,6 +3,8 @@
 
 目前只接入了DeepSeek大模型，后续可以新增更多的大模型以及慢慢扩展其他功能......
 
+V1版地址（内网穿透，不太稳定）：http://frp6.mmszxc.xin:18927
+
 ## 页面展示
 ![img.png](image/img1.png)
 ![img.png](image/img2.png)
