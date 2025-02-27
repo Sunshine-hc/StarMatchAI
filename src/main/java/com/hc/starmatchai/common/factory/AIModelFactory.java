@@ -26,7 +26,7 @@ public class AIModelFactory {
     public AIModelService getAIModelService(String modelCode) {
         AIModelService service = aiModelServiceMap.get(modelCode);
         if (service == null) {
-            throw new BusinessException("不支持的AI模型类型：" + modelCode);
+            throw new BusinessException("当前不支持该AI模型类型：" + modelCode);
         }
         return service;
     }

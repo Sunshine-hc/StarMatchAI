@@ -1,6 +1,14 @@
 # StarMatchAI
-
+PS：纯cursor实现
 StarMatchAI 是一个基于AI大模型人工智能的星座匹配分析系统，能够为用户提供专业、详细的星座配对分析。
+
+后续慢慢增加功能...
+
+## 页面展示
+![img.png](image/img1.png)
+![img.png](image/img2.png)
+![img.png](image/login_img.png)
+![img.png](image/register_img.png)
 
 ## 功能特点
 

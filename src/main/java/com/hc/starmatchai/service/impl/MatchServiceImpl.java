@@ -62,11 +62,13 @@ public class MatchServiceImpl implements MatchService {
         // 计算星座
         ZodiacSign sign1 = calculateZodiacSign(request.getPerson1Birthday());
         ZodiacSign sign2 = calculateZodiacSign(request.getPerson2Birthday());
+        request.setSign1(sign1);
+        request.setSign2(sign2);
         log.info("计算得到星座: person1Sign={}, person2Sign={}", sign1.getChineseName(), sign2.getChineseName());
 
         // 调用AI获取分析结果和评分
         log.info("开始调用AI模型进行分析");
-        Map<String, String> aiAnalysis = getAIAnalysis(sign1, sign2, request.getAiModel());
+        Map<String, String> aiAnalysis = getAIAnalysis(request);
         log.info("AI分析完成, 匹配得分: {}", aiAnalysis.get("score"));
 
         MatchResult result = MatchResult.builder()
@@ -142,9 +144,10 @@ public class MatchServiceImpl implements MatchService {
         return ZodiacSign.PISCES;
     }
 
-    private Map<String, String> getAIAnalysis(ZodiacSign sign1, ZodiacSign sign2, String modelCode) {
+    private Map<String, String> getAIAnalysis(MatchRequest req) {
+        String modelCode = req.getAiModel();
         AIModelService aiModelService = aiModelFactory.getAIModelService(modelCode);
-        return aiModelService.getMatchAnalysis(sign1, sign2);
+        return aiModelService.getMatchAnalysis(req);
     }
 
     @Override

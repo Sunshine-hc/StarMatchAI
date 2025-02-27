@@ -7,7 +7,9 @@ public enum AIModelEnum {
     DEEPSEEK("deepseek", "DeepSeek Chat"),
     CHATGLM("chatglm", "ChatGLM"),
     QWEN("qwen", "通义千问"),
-    BAICHUAN("baichuan", "百川大模型");
+    BAICHUAN("baichuan", "百川大模型"),
+    WENXIN("wenxin", "文心一言")
+    ;
 
     private final String code;
     private final String desc;

@@ -11,12 +11,10 @@ import java.util.HashMap;
 public interface AIModelService {
     /**
      * 获取星座匹配分析和评分（同步方式）
-     * 
-     * @param sign1 第一个星座
-     * @param sign2 第二个星座
+     *
      * @return 分析结果（包含score、analysis、advantages、disadvantages、suggestions）
      */
-    Map<String, String> getMatchAnalysis(ZodiacSign sign1, ZodiacSign sign2);
+    Map<String, String> getMatchAnalysis(MatchRequest req);
 
     /**
      * 获取星座匹配分析和评分（流式输出）

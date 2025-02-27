@@ -1,5 +1,6 @@
 package com.hc.starmatchai.service.impl;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
@@ -19,10 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,10 +58,15 @@ public class DeepSeekModelServiceImpl implements AIModelService {
     private final ConcurrentHashMap<SseEmitter, AtomicBoolean> emitterStatusMap = new ConcurrentHashMap<>();
 
     @Override
-    public Map<String, String> getMatchAnalysis(ZodiacSign sign1, ZodiacSign sign2) {
+    public Map<String, String> getMatchAnalysis(MatchRequest req) {
+        ZodiacSign sign1 = req.getSign1();
+        ZodiacSign sign2 = req.getSign2();
+        Date person1Birthday = req.getPerson1Birthday();
+        Date person2Birthday = req.getPerson2Birthday();
+
         log.info("开始进行星座匹配分析, sign1={}, sign2={}", sign1.getChineseName(), sign2.getChineseName());
         try {
-            String prompt = buildPrompt(sign1, sign2);
+            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday);
             log.info("生成的prompt内容: {}", prompt);
 
             log.info("开始调用DeepSeek API");
@@ -77,8 +80,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             log.info("星座匹配分析完成, 匹配得分: {}", result.get("score"));
             return result;
         } catch (Exception e) {
-            log.error("DeepSeek API调用失败, sign1={}, sign2={}, error={}",
-                    sign1.getChineseName(), sign2.getChineseName(), e.getMessage(), e);
+            log.error("DeepSeek API调用失败, sign1={}, sign2={}, error={}", sign1.getChineseName(), sign2.getChineseName(), e.getMessage(), e);
             throw new BusinessException("AI分析失败，请稍后重试");
         }
     }
@@ -87,6 +89,9 @@ public class DeepSeekModelServiceImpl implements AIModelService {
     public void getMatchAnalysisStream(MatchRequest request, SseEmitter emitter, Long userId, String matchNo) {
         ZodiacSign sign1 = request.getSign1();
         ZodiacSign sign2 = request.getSign2();
+        Date person1Birthday = request.getPerson1Birthday();
+        Date person2Birthday = request.getPerson2Birthday();
+
         // 初始化emitter状态为活跃
         AtomicBoolean isActive = new AtomicBoolean(true);
         emitterStatusMap.put(emitter, isActive);
@@ -121,7 +126,8 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(startEvent)));
 
             log.info("开始进行星座匹配分析, sign1={}, sign2={}", sign1.getChineseName(), sign2.getChineseName());
-            String prompt = buildPrompt(sign1, sign2);
+            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday);
+            log.info("请求AI模型参数：{}", JSONUtil.toJsonStr(prompt));
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -340,11 +346,18 @@ public class DeepSeekModelServiceImpl implements AIModelService {
         }
     }
 
-    private String buildPrompt(ZodiacSign sign1, ZodiacSign sign2) {
+    private String buildPrompt(ZodiacSign sign1, Date person1Birthday, ZodiacSign sign2, Date person2Birthday) {
+        String person1BirthdayStr = DateUtil.format(person1Birthday, "yyyy-MM-dd HH:mm");
+        String person2BirthdayStr = DateUtil.format(person2Birthday, "yyyy-MM-dd HH:mm");
+
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append("作为一位专业的占星师，请分析")
+                .append(person1BirthdayStr)
+                .append("出生的人")
                 .append(sign1.getChineseName())
                 .append("和")
+                .append(person2BirthdayStr)
+                .append("出生的人")
                 .append(sign2.getChineseName())
                 .append("的匹配关系。请严格按照以下格式输出：\n\n")
                 .append("匹配得分：[请给出0-100的匹配度评分，评分更细一点不要全是5的倍数，只需要数字]\n\n")
