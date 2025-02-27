@@ -4,8 +4,11 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.hc.starmatchai.common.constant.AiAnalysisConstants;
+import com.hc.starmatchai.common.dto.model.MatchRequest;
 import com.hc.starmatchai.common.exception.BusinessException;
 import com.hc.starmatchai.common.dto.model.ZodiacSign;
+import com.hc.starmatchai.common.util.RedisUtil;
 import com.hc.starmatchai.service.AIModelService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +37,10 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import cn.hutool.core.util.StrUtil;
 
+import javax.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.hc.starmatchai.common.util.AiAnalysisUtil;
+
 @Slf4j
 @Service("deepseekModelService")
 public class DeepSeekModelServiceImpl implements AIModelService {
@@ -43,6 +50,12 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
     @Value("${ai.deepseek.api-url}")
     private String apiUrl;
+
+    @Resource
+    private RedisUtil redisUtil;
+
+    @Resource
+    private AiAnalysisUtil aiAnalysisUtil;
 
     private final ConcurrentHashMap<SseEmitter, AtomicBoolean> emitterStatusMap = new ConcurrentHashMap<>();
 
@@ -71,7 +84,9 @@ public class DeepSeekModelServiceImpl implements AIModelService {
     }
 
     @Override
-    public void getMatchAnalysisStream(ZodiacSign sign1, ZodiacSign sign2, SseEmitter emitter) {
+    public void getMatchAnalysisStream(MatchRequest request, SseEmitter emitter, Long userId, String matchNo) {
+        ZodiacSign sign1 = request.getSign1();
+        ZodiacSign sign2 = request.getSign2();
         // 初始化emitter状态为活跃
         AtomicBoolean isActive = new AtomicBoolean(true);
         emitterStatusMap.put(emitter, isActive);
@@ -81,6 +96,9 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             log.info("SSE连接已完成");
             isActive.set(false);
             emitterStatusMap.remove(emitter);
+
+            // 将分析结果同步至数据库
+            aiAnalysisUtil.syncAnalysisToDatabase(userId, matchNo, AiAnalysisConstants.AnalysisType.MATCH, request);
         });
 
         emitter.onTimeout(() -> {
@@ -110,15 +128,12 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             requestBody.put("model", "deepseek-chat");
             requestBody.put("stream", true);
             requestBody.put("temperature", 0.7);
-
             Map<String, String> message = new HashMap<>();
             message.put("role", "user");
             message.put("content", prompt);
-
             List<Map<String, String>> messages = new ArrayList<>();
             messages.add(message);
             requestBody.put("messages", messages);
-
             String requestJson = JSONUtil.toJsonStr(requestBody);
 
             // 创建OkHttp客户端
@@ -128,7 +143,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .build();
 
-            Request request = new Request.Builder()
+            Request aiApiRequest = new Request.Builder()
                     .url(apiUrl)
                     .post(RequestBody.create(MediaType.parse("application/json"), requestJson))
                     .header("Authorization", "Bearer " + apiKey)
@@ -139,7 +154,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             // 用于标记各部分是否已发送
             final boolean[] sectionsSent = new boolean[5];
 
-            client.newCall(request).enqueue(new Callback() {
+            client.newCall(aiApiRequest).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     log.error("DeepSeek API请求失败", e);
@@ -179,7 +194,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                             // 快速检查是否完成
                             if ("[DONE]".equals(data)) {
                                 // 处理最后一部分内容
-                                processFullContent(fullContent.toString(), emitter, sectionsSent);
+                                processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo);
                                 break;
                             }
 
@@ -218,7 +233,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                                         }
 
                                         if (!allProcessed) {
-                                            processFullContent(fullContent.toString(), emitter, sectionsSent);
+                                            processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo);
                                         }
                                     }
                                 }
@@ -235,7 +250,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                 }
 
                 // 优化processFullContent方法
-                void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent)
+                void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent, Long userId, String matchNo)
                         throws IOException {
 
                     // 预定义关键标记
@@ -264,7 +279,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                                 scoreStr = sb.toString();
 
                                 if (!scoreStr.isEmpty()) {
-                                    sendAnalysisSection(emitter, "score", scoreStr);
+                                    sendAnalysisSection(emitter, AiAnalysisConstants.AnalysisField.MATCH_SCORE, scoreStr, userId, matchNo);
                                     sectionsSent[0] = true;
                                 }
                             }
@@ -273,22 +288,22 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
                     // 处理整体分析
                     if (!sectionsSent[1]) {
-                        processSection(content, ANALYSIS_MARKER, "analysis", 1, emitter, sectionsSent);
+                        processSection(content, ANALYSIS_MARKER, AiAnalysisConstants.AnalysisField.ANALYSIS, 1, emitter, sectionsSent);
                     }
 
                     // 处理优势特点
                     if (!sectionsSent[2]) {
-                        processSection(content, ADVANTAGES_MARKER, "advantages", 2, emitter, sectionsSent);
+                        processSection(content, ADVANTAGES_MARKER, AiAnalysisConstants.AnalysisField.ADVANTAGES, 2, emitter, sectionsSent);
                     }
 
                     // 处理潜在问题
                     if (!sectionsSent[3]) {
-                        processSection(content, DISADVANTAGES_MARKER, "disadvantages", 3, emitter, sectionsSent);
+                        processSection(content, DISADVANTAGES_MARKER, AiAnalysisConstants.AnalysisField.DISADVANTAGES, 3, emitter, sectionsSent);
                     }
 
                     // 处理相处建议
                     if (!sectionsSent[4]) {
-                        processSection(content, SUGGESTIONS_MARKER, "suggestions", 4, emitter, sectionsSent);
+                        processSection(content, SUGGESTIONS_MARKER, AiAnalysisConstants.AnalysisField.SUGGESTIONS, 4, emitter, sectionsSent);
                     }
                 }
 
@@ -312,7 +327,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                             // 简化清理过程
                             // sectionText = sectionText.replace("**", "").replace(" ", " ").trim();
                             sectionText = cleanContent(sectionText);
-                            sendAnalysisSection(emitter, eventType, sectionText);
+                            sendAnalysisSection(emitter, eventType, sectionText, userId, matchNo);
                             sectionsSent[index] = true;
                         }
                     }
@@ -483,7 +498,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
     /**
      * 安全地发送分析部分
      */
-    private void sendAnalysisSection(SseEmitter emitter, String key, String content) {
+    private void sendAnalysisSection(SseEmitter emitter, String key, String content, Long userId, String matchNo) {
         if (StrUtil.isBlank(content)) {
             return;
         }
@@ -492,10 +507,14 @@ public class DeepSeekModelServiceImpl implements AIModelService {
         if (isActive.get()) {
             try {
                 log.info("发送分析部分: key={}, content={}", key, content);
+                // 发送SSE事件
                 Map<String, Object> eventData = new HashMap<>();
                 eventData.put("event", key);
                 eventData.put("data", content);
                 emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(eventData)));
+
+                // 保存到Redis
+                aiAnalysisUtil.saveAnalysisToRedis(userId, matchNo, key, content);
             } catch (Exception e) {
                 log.warn("发送分析部分失败: {}", e.getMessage());
                 isActive.set(false);

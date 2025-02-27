@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 
 @Data
 @Schema(description = "匹配记录")
+@Accessors(chain = true) // 开启链式操作
 @TableName("match_record")
 public class MatchRecord {
     @Schema(description = "记录ID")

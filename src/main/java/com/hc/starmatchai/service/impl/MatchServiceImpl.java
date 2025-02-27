@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc.starmatchai.common.exception.BusinessException;
 import com.hc.starmatchai.common.result.PageResult;
+import com.hc.starmatchai.common.util.MatchNoGenerator;
+import com.hc.starmatchai.common.util.RedisUtil;
+import com.hc.starmatchai.common.util.UserContext;
 import com.hc.starmatchai.common.util.ValidateUtils;
 import com.hc.starmatchai.entity.MatchRecord;
 import com.hc.starmatchai.mapper.MatchRecordMapper;
@@ -42,6 +45,9 @@ public class MatchServiceImpl implements MatchService {
 
     @Resource
     private AsyncTaskExecutor taskExecutor; // 注入线程池
+
+    @Resource
+    private RedisUtil redisUtil;
 
     private final Map<SseEmitter, Boolean> emitterStatus = new ConcurrentHashMap<>();
 
@@ -218,6 +224,9 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     public SseEmitter createMatchStreamEmitter(MatchRequest request) {
+        // 获取当前用户
+        Long userId = UserContext.getCurrentUserId();
+        String matchNo = MatchNoGenerator.generateMatchNo(); // 生成匹配编号
         // 参数验证
         ValidateUtils.validateMatchRequest(request);
 
@@ -261,7 +270,7 @@ public class MatchServiceImpl implements MatchService {
             try {
                 log.info("开始执行星座匹配流式分析");
                 if (emitterStatus.get(emitter)) {
-                    calculateMatchStream(request, emitter);
+                    calculateMatchStream(request, emitter, userId, matchNo);
                 }
             } catch (Exception e) {
                 log.error("流式分析异常, request={}, error={}",
@@ -324,7 +333,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public void calculateMatchStream(MatchRequest request, SseEmitter emitter) {
+    public void calculateMatchStream(MatchRequest request, SseEmitter emitter, Long userId, String matchNo) {
         try {
             if (!emitterStatus.get(emitter)) {
                 return;
@@ -333,17 +342,18 @@ public class MatchServiceImpl implements MatchService {
             // 计算星座
             ZodiacSign sign1 = calculateZodiacSign(request.getPerson1Birthday());
             ZodiacSign sign2 = calculateZodiacSign(request.getPerson2Birthday());
+            request.setSign1(sign1);
+            request.setSign2(sign2);
 
             // 发送初始信息
             sendSignsEvent(emitter, sign1, sign2);
 
             // 获取对应的AI模型服务
             AIModelService aiModelService = aiModelFactory.getAIModelService(request.getAiModel());
-
             log.info("开始调用AI模型进行分析");
 
             // 调用AI流式分析并获取完整结果
-            aiModelService.getMatchAnalysisStream(sign1, sign2, emitter);
+            aiModelService.getMatchAnalysisStream(request, emitter, userId, matchNo);
 
             log.info("AI模型分析完成，准备保存结果");
 

@@ -1,6 +1,7 @@
 package com.hc.starmatchai.service;
 
 import cn.hutool.json.JSONUtil;
+import com.hc.starmatchai.common.dto.model.MatchRequest;
 import com.hc.starmatchai.common.dto.model.ZodiacSign;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Map;
@@ -22,17 +23,5 @@ public interface AIModelService {
      * 
      * @return 完整的匹配结果
      */
-    void getMatchAnalysisStream(ZodiacSign sign1, ZodiacSign sign2, SseEmitter emitter);
-
-    /**
-     * 辅助方法：发送带延迟的事件
-     */
-    default void sendEventWithDelay(SseEmitter emitter, String eventName, String data, long delayMillis)
-            throws InterruptedException, IOException {
-        Thread.sleep(delayMillis);
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("event", eventName);
-        eventData.put("data", data);
-        emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(eventData)));
-    }
+    void getMatchAnalysisStream(MatchRequest request, SseEmitter emitter, Long userId, String matchNo);
 }

@@ -22,5 +22,5 @@ public interface MatchService {
     /**
      * 计算匹配结果（流式输出）
      */
-    void calculateMatchStream(MatchRequest request, SseEmitter emitter);
+    void calculateMatchStream(MatchRequest request, SseEmitter emitter, Long userId, String matchNo);
 }
