@@ -52,9 +52,9 @@
                 <div class="match-info">
                   <div class="match-date">{{ formatDate(item.createdAt) }}</div>
                   <div class="match-signs">
-                    <span class="sign">{{ item.person1Sign }}</span>
+                    <span class="sign">{{ item.person1Sign }}({{ formatBirthday(item.person1Birthday) }})</span>
                     <span class="connector">与</span>
-                    <span class="sign">{{ item.person2Sign }}</span>
+                    <span class="sign">{{ item.person2Sign }}({{ formatBirthday(item.person2Birthday) }})</span>
                   </div>
                   <div class="match-score">
                     <div class="score-circle" :style="{ background: getScoreColor(item.matchScore) }">
@@ -455,6 +455,13 @@ const refreshHistory = async () => {
     }, 1000); // 保持动画至少运行1秒
   }
 };
+
+// 只添加这一个格式化生日的函数
+const formatBirthday = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 onMounted(() => {
   loadHistoryData();

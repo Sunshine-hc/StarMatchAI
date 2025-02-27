@@ -13,22 +13,22 @@
                     </div>
                 </template>
 
-                <el-form :model="matchForm" :rules="rules" ref="matchFormRef" label-width="100px">
-                    <div class="form-row">
-                        <el-form-item label="生日选择" required>
+                <el-form :model="matchForm" :rules="rules" ref="formRef" label-width="100px">
+                    <div class="form-item">
+                        <el-form-item label="生日选择" prop="birthdays" :rules="birthdayRules">
                             <div class="birthday-inputs">
-                                <el-form-item prop="person1Birthday" class="birthday-item" label-width="0">
-                                    <el-date-picker v-model="matchForm.person1Birthday" type="date"
-                                        placeholder="第一个人的生日" format="YYYY-MM-DD" value-format="YYYY-MM-DD"
-                                        :clearable="false" class="date-picker" />
+                                <el-form-item prop="person1Birthday">
+                                    <DateTimePicker
+                                        v-model="matchForm.person1Birthday"
+                                        placeholder="第一个人的生日"
+                                    />
                                 </el-form-item>
-
-                                <span class="separator">×</span>
-
-                                <el-form-item prop="person2Birthday" class="birthday-item" label-width="0">
-                                    <el-date-picker v-model="matchForm.person2Birthday" type="date"
-                                        placeholder="第二个人的生日" format="YYYY-MM-DD" value-format="YYYY-MM-DD"
-                                        :clearable="false" class="date-picker" />
+                                <span class="multiply-icon">×</span>
+                                <el-form-item prop="person2Birthday">
+                                    <DateTimePicker
+                                        v-model="matchForm.person2Birthday"
+                                        placeholder="第二个人的生日"
+                                    />
                                 </el-form-item>
                             </div>
                         </el-form-item>
@@ -165,6 +165,7 @@
 import { ref, computed, reactive, watch, watchEffect } from 'vue'
 import { calculateMatchStream } from '@/api/match'
 import { ElMessage } from 'element-plus'
+import DateTimePicker from '@/components/DateTimePicker/index.vue'
 
 const matchFormRef = ref(null)
 const loading = ref(false)
@@ -214,6 +215,8 @@ const rules = {
     ]
 }
 
+const formRef = ref(null)
+
 const getScoreColor = computed(() => {
     const score = matchResult.matchScore || 0
     if (score >= 80) return '#67C23A'
@@ -238,33 +241,6 @@ const typeWriter = async (text, key) => {
         }, 50);
     });
 };
-
-// 监听 displayContent 的变化
-// watch(() => displayContent.analysis, (newVal) => {
-//     console.log('分析总结内容:', newVal)
-// })
-
-// watch(() => displayContent.advantages, (newVal) => {
-//     console.log('优势特点内容:', newVal)
-// })
-
-// watch(() => displayContent.disadvantages, (newVal) => {
-//     console.log('潜在问题内容:', newVal)
-// })
-
-// watch(() => displayContent.suggestions, (newVal) => {
-//     console.log('相处建议内容:', newVal)
-// })
-
-// 使用 watchEffect 来监听变化
-// watchEffect(() => {
-//     console.log('displayContent 发生变化:', {
-//         analysis: displayContent.analysis,
-//         advantages: displayContent.advantages,
-//         disadvantages: displayContent.disadvantages,
-//         suggestions: displayContent.suggestions
-//     });
-// });
 
 // 修改匹配提交函数
 const submitMatch = async () => {
@@ -356,11 +332,11 @@ const submitMatch = async () => {
 
 // 修改提交处理函数
 const handleSubmit = async () => {
-    if (!matchFormRef.value) return
+    if (!formRef.value) return
 
     try {
         // 表单验证
-        await matchFormRef.value.validate()
+        await formRef.value.validate()
         // 验证通过后调用匹配
         await submitMatch()
     } catch (error) {
@@ -459,39 +435,63 @@ const getZodiacIcon = (signName) => {
     font-weight: 500;
 }
 
+.form-item {
+    margin-bottom: 20px;
+}
+
 .birthday-inputs {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 8px;
+    flex-wrap: wrap; /* 允许在小屏幕上换行 */
 }
 
-.date-picker {
-    width: 240px !important;
+.multiply-icon {
+    color: #E5E7EB;
+    font-size: 16px;
+    padding: 0 4px;
+    display: none; /* 在小屏幕上隐藏乘号 */
+}
+
+/* 响应式布局 */
+@media screen and (min-width: 768px) {
+    .birthday-inputs {
+        flex-wrap: nowrap;
+    }
+    
+    .multiply-icon {
+        display: block;
+    }
+}
+
+:deep(.el-form-item) {
+    flex: 1;
+    min-width: 200px; /* 确保输入框有最小宽度 */
+    margin-bottom: 8px; /* 在换行时保持间距 */
+}
+
+:deep(.el-form-item__error) {
+    padding-top: 4px;
+}
+
+/* 移动端优化 */
+@media screen and (max-width: 767px) {
+    .birthday-inputs {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    :deep(.el-form-item) {
+        width: 100%;
+    }
+
+    :deep(.picker-input) {
+        width: 100%;
+    }
 }
 
 .model-select {
     width: 240px !important;
-}
-
-:deep(.el-input__wrapper),
-:deep(.el-select .el-input__wrapper) {
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-:deep(.el-input__wrapper:hover),
-:deep(.el-select .el-input__wrapper:hover) {
-    border-color: #00FF88;
-}
-
-:deep(.el-input__inner) {
-    color: #FFFFFF;
-}
-
-.separator {
-    color: #00FF88;
-    font-size: 20px;
 }
 
 /* 按钮样式 */
