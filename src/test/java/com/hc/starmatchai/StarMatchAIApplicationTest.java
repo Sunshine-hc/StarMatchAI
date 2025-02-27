@@ -9,6 +9,5 @@ class StarMatchAIApplicationTest {
     @Test
     void contextLoads() {
         // 测试Spring上下文是否能够正常加载
-
     }
 }
