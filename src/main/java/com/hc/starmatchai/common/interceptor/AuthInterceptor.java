@@ -28,7 +28,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String token = getTokenFromRequest(request);
         log.info("Token extracted: {}", token != null ? "present" : "null");
         if (StrUtil.isBlank(token) || "null".equals(token)) {
-            throw new BusinessException(401, "未登录");
+            throw new BusinessException(401, "请先登录！");
         }
 
         if (StringUtils.hasText(token)) {
