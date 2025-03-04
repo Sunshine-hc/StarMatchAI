@@ -346,8 +346,8 @@ const handleSubmit = async () => {
 
 // 修改AI模型选项，只保留支持的模型
 const aiModelOptions = [
-    { label: 'DeepSeek', value: 'deepseek' },
-    { label: '文心一言', value: 'wenxin' }
+    { label: 'DeepSeek', value: 'deepseek-chat' },
+    { label: '通义千问-Turbo', value: 'qwen-turbo' }
 ]
 
 // 添加星座图标映射

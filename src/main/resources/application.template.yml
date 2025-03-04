@@ -82,9 +82,14 @@ knife4j:
 
 # AI模型配置
 ai:
+  # DeepSeek大模型
   deepseek:
     api-key: # deepseek api key
     api-url: https://api.deepseek.com/v1/chat/completions
+  # 通义千问-Turbo
+  qwen-turbo:
+    api-key: # qwen-turbo api key
+    api-url: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 
 jwt:
   secret: # 生成自己secret

@@ -1,55 +1,41 @@
 package com.hc.starmatchai.service.impl;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.hc.starmatchai.common.constant.AiAnalysisConstants;
 import com.hc.starmatchai.common.dto.model.MatchRequest;
-import com.hc.starmatchai.common.exception.BusinessException;
 import com.hc.starmatchai.common.dto.model.ZodiacSign;
-import com.hc.starmatchai.common.util.RedisUtil;
+import com.hc.starmatchai.common.exception.BusinessException;
+import com.hc.starmatchai.common.util.AiAnalysisUtil;
 import com.hc.starmatchai.service.AIModelService;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.Resource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.ConcurrentHashMap;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import cn.hutool.core.util.StrUtil;
-
-import javax.annotation.Resource;
-import com.hc.starmatchai.common.util.AiAnalysisUtil;
 
 @Slf4j
-@Service("deepseek-chatModelService")
-public class DeepSeekModelServiceImpl implements AIModelService {
-
-    @Value("${ai.deepseek.api-key}")
+@Service("qwen-turboModelService")
+public class QwenTurboModelServiceImpl implements AIModelService {
+    @Value("${ai.qwen-turbo.api-key}")
     private String apiKey;
 
-    @Value("${ai.deepseek.api-url}")
+    @Value("${ai.qwen-turbo.api-url}")
     private String apiUrl;
-
-    @Resource
-    private RedisUtil redisUtil;
 
     @Resource
     private AiAnalysisUtil aiAnalysisUtil;
@@ -58,30 +44,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
     @Override
     public Map<String, String> getMatchAnalysis(MatchRequest req) {
-        ZodiacSign sign1 = req.getSign1();
-        ZodiacSign sign2 = req.getSign2();
-        Date person1Birthday = req.getPerson1Birthday();
-        Date person2Birthday = req.getPerson2Birthday();
-
-        log.info("开始进行星座匹配分析, sign1={}, sign2={}", sign1.getChineseName(), sign2.getChineseName());
-        try {
-            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday);
-            log.info("生成的prompt内容: {}", prompt);
-
-            log.info("开始调用DeepSeek API");
-            long startTime = System.currentTimeMillis();
-            String response = callDeepSeekAPI(prompt);
-            long endTime = System.currentTimeMillis();
-            log.info("DeepSeek API调用完成, 耗时: {}ms", endTime - startTime);
-            log.info("API原始响应: {}", response);
-
-            Map<String, String> result = parseResponse(response);
-            log.info("星座匹配分析完成, 匹配得分: {}", result.get("score"));
-            return result;
-        } catch (Exception e) {
-            log.error("DeepSeek API调用失败, sign1={}, sign2={}, error={}", sign1.getChineseName(), sign2.getChineseName(), e.getMessage(), e);
-            throw new BusinessException("AI分析失败，请稍后重试");
-        }
+        return Collections.emptyMap();
     }
 
     @Override
@@ -133,7 +96,8 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", aiModel);
             requestBody.put("stream", true);
-            requestBody.put("temperature", 0.7);
+            requestBody.put("top_p", 0.8);
+            requestBody.put("temperature", 1.0);
             Map<String, String> message = new HashMap<>();
             message.put("role", "user");
             message.put("content", prompt);
@@ -163,7 +127,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             client.newCall(aiApiRequest).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    log.error("DeepSeek API请求失败", e);
+                    log.error("通义千问-Turbo API请求失败", e);
                     safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
                 }
 
@@ -345,7 +309,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             });
 
         } catch (Exception e) {
-            log.error("DeepSeek API流式请求异常: {}", e.getMessage(), e);
+            log.error("通义千问-Turbo API流式请求异常: {}", e.getMessage(), e);
             safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
         }
     }
@@ -371,43 +335,6 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                 .append("相处建议：[给出具体的相处建议和改善方法]\n\n")
                 .append("请确保严格按照以上格式回复，每个部分都要有实质性的内容。");
         return promptBuilder.toString();
-    }
-
-    private String callDeepSeekAPI(String prompt) {
-        try {
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", "deepseek-chat");
-
-            Map<String, String> message = new HashMap<>();
-            message.put("role", "user");
-            message.put("content", prompt);
-
-            Object[] messages = new Object[] { message };
-            requestBody.put("messages", messages);
-
-            String requestJson = JSONUtil.toJsonStr(requestBody);
-            log.info("DeepSeek API请求参数: {}", requestJson);
-
-            long startTime = System.currentTimeMillis();
-            HttpResponse response = HttpRequest.post(apiUrl)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .header("Content-Type", "application/json")
-                    .body(requestJson)
-                    .execute();
-            long endTime = System.currentTimeMillis();
-
-            log.info("DeepSeek API响应状态码: {}, 耗时: {}ms", response.getStatus(), endTime - startTime);
-
-            if (response.isOk()) {
-                return response.body();
-            } else {
-                log.error("DeepSeek API调用失败, 状态码: {}, 响应内容: {}", response.getStatus(), response.body());
-                throw new BusinessException("AI服务调用失败");
-            }
-        } catch (Exception e) {
-            log.error("DeepSeek API请求异常: {}", e.getMessage(), e);
-            throw new BusinessException("AI服务调用失败");
-        }
     }
 
     private Map<String, String> parseResponse(String response) {
@@ -473,7 +400,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
     /**
      * 安全地发送SSE事件
-     * 
+     *
      * @param emitter   SSE发射器
      * @param eventType 事件类型
      * @param data      事件数据

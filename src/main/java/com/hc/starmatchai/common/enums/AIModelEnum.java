@@ -4,9 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum AIModelEnum {
-    DEEPSEEK("deepseek", "DeepSeek Chat"),
+    DEEPSEEK("deepseek-chat", "DeepSeek Chat"),
     CHATGLM("chatglm", "ChatGLM"),
-    QWEN("qwen", "通义千问"),
+    QWEN("qwen-turbo", "通义千问-Turbo"),
     BAICHUAN("baichuan", "百川大模型"),
     WENXIN("wenxin", "文心一言")
     ;
