@@ -200,7 +200,7 @@ const displayContent = reactive({
 const matchForm = ref({
     person1Birthday: '',
     person2Birthday: '',
-    aiModel: 'deepseek'
+    aiModel: 'qwen-turbo'
 })
 
 const rules = {
@@ -346,8 +346,8 @@ const handleSubmit = async () => {
 
 // 修改AI模型选项，只保留支持的模型
 const aiModelOptions = [
-    { label: 'DeepSeek', value: 'deepseek-chat' },
-    { label: '通义千问-Turbo', value: 'qwen-turbo' }
+    { label: '通义千问-Turbo', value: 'qwen-turbo' },
+    { label: 'DeepSeek', value: 'deepseek-chat' }
 ]
 
 // 添加星座图标映射
