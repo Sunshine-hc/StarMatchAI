@@ -1,0 +1,95 @@
+server:
+  port: 8080
+
+spring:
+  
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/star_match_ai?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password:
+
+  redis:
+    # Redis服务器地址
+    host: localhost
+    # Redis服务器连接端口
+    port: 6379
+    # Redis数据库索引（默认为0）
+    database: 0
+    # Redis服务器连接密码（默认为空）
+    password:  
+    # 连接超时时间（毫秒）
+    timeout: 10000
+    # 使用lettuce连接池
+    lettuce:
+      pool:
+        # 连接池最大连接数（使用负值表示没有限制）
+        max-active: 8
+        # 连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1
+        # 连接池中的最大空闲连接
+        max-idle: 8
+        # 连接池中的最小空闲连接
+        min-idle: 0
+
+  # 邮件配置
+  mail:
+    # 替换为您的SMTP服务器
+    host: smtp.qq.com
+    # SMTP端口，通常是25、465或587
+    port: 587
+    # 您的邮箱地址
+    username:
+    # 您的邮箱密码或应用专用密码
+    password:
+#    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+# MyBatis Plus配置
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*Mapper.xml
+  type-aliases-package: com.hc.starmatchai.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    # 使用控制台输出日志
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Knife4j配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# AI模型配置
+ai:
+  # DeepSeek大模型
+  deepseek:
+    api-key: # deepseek api key
+    api-url: https://api.deepseek.com/v1/chat/completions
+  # 通义千问-Turbo
+  qwen-turbo:
+    api-key: # qwen-turbo api key
+    api-url: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+
+jwt:
+  secret: # 生成自己secret
+  expiration: 86400000  # 24小时，单位毫秒
+

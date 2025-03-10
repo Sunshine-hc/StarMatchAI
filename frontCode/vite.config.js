@@ -21,5 +21,8 @@ export default defineConfig({
                 rewrite: (path) => path.replace(/^\/api/, '')
             }
         }
+    },
+    build: {
+        base: '/',  // 设置为部署时的根路径
     }
 }) 

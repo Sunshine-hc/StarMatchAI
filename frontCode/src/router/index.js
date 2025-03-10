@@ -46,18 +46,18 @@ const routes = [
             //     component: () => import('../views/match/history.vue'),
             //     meta: { title: '匹配历史', requiresAuth: true }
             // },
-            {
-                path: 'match/create',
-                name: 'CreateMatch',
-                component: () => import('../views/match/create.vue'),
-                meta: { title: '创建匹配', requiresAuth: true }
-            },
-            {
-                path: 'match/detail/:id',
-                name: 'MatchDetail',
-                component: () => import('../views/match/detail.vue'),
-                meta: { title: '匹配详情', requiresAuth: true }
-            }
+            // {
+            //     path: 'match/create',
+            //     name: 'CreateMatch',
+            //     component: () => import('../views/match/create.vue'),
+            //     meta: { title: '创建匹配', requiresAuth: true }
+            // },
+            // {
+            //     path: 'match/detail/:id',
+            //     name: 'MatchDetail',
+            //     component: () => import('../views/match/detail.vue'),
+            //     meta: { title: '匹配详情', requiresAuth: true }
+            // }
         ]
     },
     {
