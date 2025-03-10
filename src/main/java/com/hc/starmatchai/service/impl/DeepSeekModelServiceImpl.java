@@ -141,6 +141,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             messages.add(message);
             requestBody.put("messages", messages);
             String requestJson = JSONUtil.toJsonStr(requestBody);
+            log.info("请求大模型API参数：{}", requestJson);
 
             // 创建OkHttp客户端
             OkHttpClient client = new OkHttpClient.Builder()

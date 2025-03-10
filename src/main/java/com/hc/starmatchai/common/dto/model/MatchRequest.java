@@ -20,7 +20,7 @@ public class MatchRequest {
     @Schema(description = "第二个人的星座")
     private ZodiacSign sign2;
 
-    @Schema(description = "AI模型选择", example = "deepseek", required = true, allowableValues = { "deepseek", "chatglm",
-            "qwen", "baichuan" })
-    private String aiModel = AIModelEnum.DEEPSEEK.getCode();
+    @Schema(description = "AI模型选择", example = "qwen-turbo", required = true, allowableValues = { "deepseek-chat", "chatglm",
+            "qwen-turbo", "baichuan", "wenxin" })
+    private String aiModel = AIModelEnum.QWEN.getCode();
 }
