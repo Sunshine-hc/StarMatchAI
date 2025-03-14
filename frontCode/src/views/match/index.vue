@@ -378,25 +378,25 @@ const getZodiacIcon = (signName) => {
 
 .match-container {
     min-height: 100vh;
-    background: #1A1D2F;
+    background: linear-gradient(135deg, #1A1D2F 0%, #2A2F4F 100%);
     padding: 40px 0;
-    /* 移除左右padding */
     display: flex;
     align-items: flex-start;
-    /* 改为顶部对齐 */
     justify-content: center;
-    padding-top: 20px; /* 为header下方添加一些空间 */
+    padding-top: 20px;
+    position: relative;
+    overflow: hidden;
 }
 
 .content-wrapper {
     width: 100%;
     max-width: 800px;
-    /* 统一宽度 */
     margin: 0 20px;
-    /* 添加左右边距 */
     display: flex;
     flex-direction: column;
     gap: 30px;
+    position: relative;
+    z-index: 2;
 }
 
 .match-card {
@@ -405,6 +405,13 @@ const getZodiacIcon = (signName) => {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.match-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 .starry-background {
@@ -413,10 +420,19 @@ const getZodiacIcon = (signName) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: radial-gradient(circle at center, #ffffff 1px, transparent 1px);
-    background-size: 50px 50px;
-    opacity: 0.1;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+    background-size: 50px 50px, 100px 100px;
+    opacity: 0.2;
     pointer-events: none;
+    animation: twinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+    0% { opacity: 0.1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 0.1; }
 }
 
 .card-header {
@@ -426,13 +442,19 @@ const getZodiacIcon = (signName) => {
     font-weight: 600;
     text-align: center;
     margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(90deg, #00FF88, #00CCFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 /* 表单样式 */
 :deep(.el-form-item__label) {
-    color: #FFFFFF !important;
+    color: #E5E7EB !important;
     font-family: 'Poppins', sans-serif;
     font-weight: 500;
+    letter-spacing: 0.5px;
 }
 
 .form-item {
@@ -442,15 +464,15 @@ const getZodiacIcon = (signName) => {
 .birthday-inputs {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap; /* 允许在小屏幕上换行 */
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .multiply-icon {
-    color: #E5E7EB;
-    font-size: 16px;
+    color: #00FF88;
+    font-size: 18px;
     padding: 0 4px;
-    display: none; /* 在小屏幕上隐藏乘号 */
+    display: none;
 }
 
 /* 响应式布局 */
@@ -466,12 +488,36 @@ const getZodiacIcon = (signName) => {
 
 :deep(.el-form-item) {
     flex: 1;
-    min-width: 200px; /* 确保输入框有最小宽度 */
-    margin-bottom: 8px; /* 在换行时保持间距 */
+    min-width: 200px;
+    margin-bottom: 8px;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-select .el-input__wrapper) {
+    background: rgba(26, 29, 47, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none !important;
+    transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-select .el-input__wrapper:hover) {
+    border-color: rgba(0, 255, 136, 0.5);
+}
+
+:deep(.el-input__wrapper.is-focus),
+:deep(.el-select .el-input__wrapper.is-focus) {
+    border-color: #00FF88;
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.2) !important;
+}
+
+:deep(.el-input__inner) {
+    color: #FFFFFF;
 }
 
 :deep(.el-form-item__error) {
     padding-top: 4px;
+    color: #FF6B6B;
 }
 
 /* 移动端优化 */
@@ -497,18 +543,27 @@ const getZodiacIcon = (signName) => {
 /* 按钮样式 */
 .submit-button {
     width: 240px;
-    height: 40px;
-    background: linear-gradient(45deg, #00FF88, #00CC88);
+    height: 44px;
+    background: linear-gradient(45deg, #00FF88, #00CCFF);
     border: none;
     border-radius: 8px;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.5px;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
 }
 
 .submit-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+    box-shadow: 0 6px 18px rgba(0, 255, 136, 0.4);
+    background: linear-gradient(45deg, #00FF9A, #00D8FF);
+}
+
+.submit-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3);
 }
 
 /* 加载动画卡片 */
@@ -534,26 +589,53 @@ const getZodiacIcon = (signName) => {
     color: #00FF88;
     font-family: 'Poppins', sans-serif;
     margin-top: 20px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
 }
 
-/* 响应式布局 */
+/* 响应式调整 */
 @media screen and (max-width: 768px) {
     .match-container {
-        padding: 20px 10px;
+        padding: 10px;
     }
 
-    .birthday-inputs {
+    .result-card {
+        margin: 20px 10px;
+    }
+    
+    /* 移除这些样式，保持水平布局 */
+    /*
+    .zodiac-pair {
         flex-direction: column;
+        gap: 30px;
     }
 
-    .date-picker,
-    .model-select,
-    .submit-button {
-        width: 100% !important;
-    }
-
-    .separator {
+    .zodiac-pair::before {
         display: none;
+    }
+    */
+    
+    /* 添加这些样式来适应小屏幕 */
+    .zodiac-item {
+        padding: 15px 10px;
+    }
+    
+    .zodiac-icon {
+        font-size: 36px;
+    }
+    
+    .zodiac-name {
+        font-size: 16px;
+    }
+    
+    .score-circle {
+        width: 90px;
+        height: 90px;
+        font-size: 28px;
+    }
+
+    .details-section {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -577,42 +659,83 @@ const getZodiacIcon = (signName) => {
     justify-content: space-around;
     align-items: center;
     margin: 20px 0;
+    position: relative;
+}
+
+.zodiac-pair::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 25%;
+    right: 25%;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(0, 255, 136, 0.3) 20%, 
+        rgba(0, 255, 136, 0.5) 50%, 
+        rgba(0, 255, 136, 0.3) 80%, 
+        transparent
+    );
+    z-index: 0;
 }
 
 .zodiac-item {
     text-align: center;
+    background: rgba(42, 47, 79, 0.7);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.zodiac-item:hover {
+    transform: translateY(-5px);
 }
 
 .zodiac-icon {
     font-size: 48px;
     color: #FFD700;
     margin-bottom: 10px;
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    animation: pulse 3s infinite alternate;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.1); opacity: 1; }
 }
 
 .zodiac-name {
     font-family: 'Poppins', sans-serif;
     color: #FFFFFF;
     font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .match-score {
     position: relative;
+    z-index: 2;
 }
 
 .score-circle {
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background: rgba(42, 47, 79, 0.9);
+    background: rgba(26, 29, 47, 0.9);
     display: flex;
     justify-content: center;
     align-items: center;
     font-family: 'Roboto Mono', monospace;
-    font-size: 32px;
+    font-size: 36px;
+    font-weight: 600;
     color: #FFFFFF;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
     position: relative;
     overflow: hidden;
+    border: 3px solid rgba(0, 255, 136, 0.3);
 }
 
 /* 水容器 */
@@ -633,18 +756,18 @@ const getZodiacIcon = (signName) => {
     bottom: 0;
     left: 0;
     width: 100%;
-    background: rgba(0, 220, 120, 0.8);
+    background: linear-gradient(180deg, rgba(0, 220, 120, 0.7), rgba(0, 200, 255, 0.7));
     transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 水面波浪效果 - 降低高度和波动幅度 */
 .water-surface {
     position: absolute;
-    top: -5px; /* 从-10px改为-5px，降低高度 */
+    top: -5px;
     left: 0;
     width: 100%;
-    height: 10px; /* 从20px改为10px，降低高度 */
-    background: rgba(0, 220, 120, 0.8);
+    height: 10px;
+    background: rgba(0, 220, 255, 0.8);
     border-radius: 50%;
     animation: water-ripple 2s ease-in-out infinite alternate;
 }
@@ -656,11 +779,11 @@ const getZodiacIcon = (signName) => {
         border-radius: 50% 50% 25% 25% / 50% 50% 25% 25%;
     }
     50% {
-        transform: scale(1.03, 0.97) translateY(1px); /* 减小变形幅度 */
+        transform: scale(1.03, 0.97) translateY(1px);
         border-radius: 25% 25% 50% 50% / 25% 25% 50% 50%;
     }
     100% {
-        transform: scale(0.97, 1.03) translateY(-1px); /* 减小变形幅度 */
+        transform: scale(0.97, 1.03) translateY(-1px);
         border-radius: 50% 50% 25% 25% / 50% 50% 25% 25%;
     }
 }
@@ -672,12 +795,12 @@ const getZodiacIcon = (signName) => {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 2;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
     width: 100%;
     text-align: center;
-    line-height: 1; /* 添加行高确保垂直居中 */
-    margin-top: 0; /* 移除可能的边距 */
-    padding: 0; /* 移除可能的内边距 */
+    line-height: 1;
+    margin-top: 0;
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -685,9 +808,9 @@ const getZodiacIcon = (signName) => {
 }
 
 .score-unit {
-    font-size: 16px;
+    font-size: 18px;
     margin-left: 2px;
-    vertical-align: middle; /* 确保单位与数字对齐 */
+    vertical-align: middle;
 }
 
 .result-content {
@@ -701,26 +824,42 @@ const getZodiacIcon = (signName) => {
 .section-title {
     color: #00FF88;
     font-family: 'Poppins', sans-serif;
-    font-size: 20px;
+    font-size: 22px;
     margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 10px;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    position: relative;
+    padding-left: 15px;
+}
+
+.section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 24px;
+    background: linear-gradient(to bottom, #00FF88, #00CCFF);
+    border-radius: 3px;
 }
 
 .summary-content {
     background: rgba(0, 255, 136, 0.1);
     border-left: 4px solid #00FF88;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 25px;
     position: relative;
     backdrop-filter: blur(5px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .summary-text {
     color: #FFFFFF;
     line-height: 1.8;
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.5px;
     white-space: pre-line;
     opacity: 0.95;
@@ -730,9 +869,9 @@ const getZodiacIcon = (signName) => {
 .summary-content::before {
     content: '"';
     position: absolute;
-    left: 10px;
+    left: 15px;
     top: 0;
-    font-size: 40px;
+    font-size: 50px;
     color: rgba(0, 255, 136, 0.3);
     font-family: serif;
 }
@@ -740,9 +879,9 @@ const getZodiacIcon = (signName) => {
 .summary-content::after {
     content: '"';
     position: absolute;
-    right: 10px;
-    bottom: -10px;
-    font-size: 40px;
+    right: 15px;
+    bottom: -15px;
+    font-size: 50px;
     color: rgba(0, 255, 136, 0.3);
     font-family: serif;
 }
@@ -750,15 +889,15 @@ const getZodiacIcon = (signName) => {
 /* 添加微光效果 */
 @keyframes glow {
     0% {
-        box-shadow: 0 0 5px rgba(0, 255, 136, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
     50% {
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        box-shadow: 0 4px 25px rgba(0, 255, 136, 0.2);
     }
 
     100% {
-        box-shadow: 0 0 5px rgba(0, 255, 136, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 }
 
@@ -767,15 +906,49 @@ const getZodiacIcon = (signName) => {
 }
 
 .details-section {
-    display: grid;
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
 }
 
 .detail-card {
     background: rgba(42, 47, 79, 0.5);
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 25px;
     margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.detail-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.detail-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(90deg, #FFD700, #FF6B6B);
+    opacity: 0.7;
+}
+
+.detail-card:nth-child(1)::after {
+    background: linear-gradient(90deg, #00FF88, #00CCFF);
+}
+
+.detail-card:nth-child(2)::after {
+    background: linear-gradient(90deg, #FF6B6B, #FFD700);
+}
+
+.detail-card:nth-child(3)::after {
+    background: linear-gradient(90deg, #A78BFA, #F472B6);
 }
 
 .detail-title {
@@ -784,13 +957,47 @@ const getZodiacIcon = (signName) => {
     font-size: 18px;
     margin-bottom: 15px;
     opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-title::before {
+    content: '•';
+    color: #FFD700;
+    font-size: 24px;
+}
+
+.detail-card:nth-child(1) .detail-title {
+    color: #00FF88;
+}
+
+.detail-card:nth-child(1) .detail-title::before {
+    color: #00FF88;
+}
+
+.detail-card:nth-child(2) .detail-title {
+    color: #FF6B6B;
+}
+
+.detail-card:nth-child(2) .detail-title::before {
+    color: #FF6B6B;
+}
+
+.detail-card:nth-child(3) .detail-title {
+    color: #A78BFA;
+}
+
+.detail-card:nth-child(3) .detail-title::before {
+    color: #A78BFA;
 }
 
 .detail-text {
     color: #FFFFFF;
     line-height: 1.8;
     font-size: 15px;
-    opacity: 0.85;
+    opacity: 0.9;
+    letter-spacing: 0.3px;
 }
 
 /* 加载动画 */
@@ -812,8 +1019,8 @@ const getZodiacIcon = (signName) => {
 }
 
 .galaxy {
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
     position: relative;
     animation: rotate 4s linear infinite;
 }
@@ -825,6 +1032,7 @@ const getZodiacIcon = (signName) => {
     background: #00FF88;
     border-radius: 50%;
     animation: twinkle 1s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
 }
 
 @keyframes rotate {
@@ -838,44 +1046,38 @@ const getZodiacIcon = (signName) => {
 }
 
 @keyframes twinkle {
-
-    0%,
-    100% {
+    0%, 100% {
         opacity: 0.3;
+        transform: scale(0.8);
     }
 
     50% {
         opacity: 1;
-    }
-}
-
-/* 响应式调整 */
-@media screen and (max-width: 768px) {
-    .match-container {
-        padding: 10px;
-    }
-
-    .result-card {
-        margin: 20px 10px;
-    }
-
-    .zodiac-pair {
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .details-section {
-        grid-template-columns: 1fr;
+        transform: scale(1.2);
     }
 }
 
 /* 流星动画 */
 .shooting-star {
     position: absolute;
-    width: 2px;
-    height: 2px;
-    background: #ffffff;
-    animation: shooting 3s linear infinite;
+    width: 3px;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0), #ffffff, rgba(255, 255, 255, 0));
+    border-radius: 50%;
+    animation: shooting 6s linear infinite;
+    opacity: 0;
+    box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.5);
+}
+
+.shooting-star::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100px;
+    height: 1px;
+    background: linear-gradient(90deg, #ffffff, rgba(255, 255, 255, 0));
+    transform: translateX(-100%);
 }
 
 .shooting-star:nth-child(1) {
@@ -887,33 +1089,39 @@ const getZodiacIcon = (signName) => {
 .shooting-star:nth-child(2) {
     top: 20%;
     left: 30%;
-    animation-delay: 1s;
+    animation-delay: 2s;
 }
 
 .shooting-star:nth-child(3) {
     top: 30%;
     left: 50%;
-    animation-delay: 2s;
+    animation-delay: 4s;
 }
 
 .shooting-star:nth-child(4) {
     top: 40%;
     left: 70%;
-    animation-delay: 3s;
+    animation-delay: 6s;
 }
 
 .shooting-star:nth-child(5) {
     top: 50%;
     left: 90%;
-    animation-delay: 4s;
+    animation-delay: 8s;
 }
 
 @keyframes shooting {
     0% {
         transform: translateX(0) translateY(0) rotate(45deg);
+        opacity: 0;
+    }
+    5% {
         opacity: 1;
     }
-
+    20% {
+        transform: translateX(20vw) translateY(20vh) rotate(45deg);
+        opacity: 0;
+    }
     100% {
         transform: translateX(100vw) translateY(100vh) rotate(45deg);
         opacity: 0;
@@ -934,6 +1142,7 @@ const getZodiacIcon = (signName) => {
     background-color: #00FF88;
     display: inline-block;
     animation: dots 1.4s infinite;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
 }
 
 .loading-dots span:nth-child(2) {
@@ -960,7 +1169,7 @@ const getZodiacIcon = (signName) => {
     justify-content: center;
     align-items: center;
     width: 100%;
-    min-height: 60px; /* 确保有足够的高度 */
+    min-height: 60px;
 }
 
 .loading-container {
@@ -968,13 +1177,15 @@ const getZodiacIcon = (signName) => {
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    /* background: rgba(0, 255, 136, 0.05); 可选：添加一个微妙的背景 */
-    border-radius: 4px;
+    background: rgba(0, 255, 136, 0.05);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);
 }
 
 .loading-text {
     color: #00FF88;
     font-size: 14px;
+    letter-spacing: 0.5px;
 }
 
 .loading-dots {
@@ -990,5 +1201,23 @@ const getZodiacIcon = (signName) => {
     background-color: #00FF88;
     display: inline-block;
     animation: dots 1.4s infinite;
+}
+
+/* 为星座图标添加特殊样式 */
+.zodiac-icon {
+    position: relative;
+}
+
+.zodiac-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0) 70%);
+    border-radius: 50%;
+    z-index: -1;
 }
 </style>
