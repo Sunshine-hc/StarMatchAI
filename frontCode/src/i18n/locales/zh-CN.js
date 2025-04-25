@@ -9,6 +9,13 @@ export default {
         user: '用户',
         userInitial: '用'
     },
+    profile: {
+        title: '个人中心',
+        memberSince: '注册日期',
+        accountInfo: '账户信息',
+        email: '邮箱',
+        noEmail: '未设置邮箱'
+    },
     history: {
         title: '匹配历史记录',
         refresh: '刷新',

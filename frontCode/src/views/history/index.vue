@@ -82,60 +82,6 @@
       </el-card>
     </div>
   </div>
-  
-  <!-- 匹配详情对话框 -->
-  <el-dialog
-    v-model="detailVisible"
-    :title="$t('history.matchDetails')"
-    width="90%"
-    :close-on-click-modal="false"
-    custom-class="match-detail-dialog"
-    :before-close="handleCloseDetail"
-  >
-    <div class="match-detail-container">
-      <h2 class="match-title">{{ $t(`zodiac.${detailData.person1Sign}`) }} {{ $t('history.and') }} {{ $t(`zodiac.${detailData.person2Sign}`) }} {{ $t('history.matchAnalysis') }}</h2>
-      
-      <div class="score-display">
-        <div class="score-circle" :style="{ background: getScoreColor(detailData.matchScore) }">
-          {{ detailData.matchScore }}%
-        </div>
-      </div>
-      
-      <div class="detail-content">
-        <div class="detail-section">
-          <h3 class="section-title">{{ $t('match.analysis') }}:</h3>
-          <p class="section-text">{{ detailData.analysis }}</p>
-        </div>
-        
-        <div class="detail-section">
-          <h3 class="section-title">{{ $t('match.advantages') }}:</h3>
-          <div class="advantage-list">
-            <p class="section-text">{{ detailData.advantages }}</p>
-          </div>
-        </div>
-        
-        <div class="detail-section">
-          <h3 class="section-title">{{ $t('match.disadvantages') }}:</h3>
-          <div class="disadvantage-list">
-            <p class="section-text">{{ detailData.disadvantages }}</p>
-          </div>
-        </div>
-        
-        <div class="detail-section">
-          <h3 class="section-title">{{ $t('match.suggestions') }}:</h3>
-          <div class="suggestion-list">
-            <p class="section-text">{{ detailData.suggestions }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button class="close-button" @click="handleCloseDetail">{{ $t('history.close') }}</el-button>
-      </div>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup>
@@ -150,18 +96,6 @@ const loading = ref(true);
 const historyList = ref([]);
 const today = new Date();
 today.setHours(0, 0, 0, 0);
-
-// 临时存放对话框数据
-const detailVisible = ref(false);
-const detailData = ref({
-  person1Sign: '',
-  person2Sign: '',
-  matchScore: 0,
-  analysis: '',
-  advantages: '',
-  disadvantages: '',
-  suggestions: ''
-});
 
 // 计算时间分组
 const groupedHistory = computed(() => {
@@ -261,8 +195,121 @@ const viewDetail = async (item) => {
   try {
     const response = await getMatchRecordDetail(item.id);
     if (response.code === 200) {
-      detailData.value = response.data || item;
-      detailVisible.value = true;
+      const detailData = response.data || item;
+      
+      // 构建详情内容HTML
+      const detailContent = `
+        <div class="match-detail-content" style="max-height: 60vh; overflow-y: auto; padding: 10px;">
+          <h3 style="
+            text-align: center;
+            color: #40E0D0;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(64, 224, 208, 0.1);
+            border-radius: 8px;
+          ">${t(`zodiac.${detailData.person1Sign}`)} ${t('history.and')} ${t(`zodiac.${detailData.person2Sign}`)} ${t('history.matchAnalysis')}</h3>
+          
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="
+              display: inline-block;
+              width: 80px;
+              height: 80px;
+              line-height: 80px;
+              border-radius: 50%;
+              background: ${getScoreColor(detailData.matchScore)};
+              color: white;
+              font-size: 1.5rem;
+              font-weight: bold;
+              text-align: center;
+              box-shadow: 0 0 15px rgba(64, 224, 208, 0.3);
+            ">
+              ${detailData.matchScore}%
+            </span>
+          </div>
+          
+          ${detailData.analysis ? `
+            <div style="
+              margin-bottom: 15px;
+              padding: 15px;
+              border-radius: 8px;
+              background: rgba(64, 224, 208, 0.05);
+              border: 1px solid rgba(64, 224, 208, 0.1);
+            ">
+              <strong style="
+                color: #40E0D0;
+                display: block;
+                margin-bottom: 8px;
+                font-size: 1.1rem;
+              ">${t('match.analysis')}：</strong>
+              <div style="color: #E0FFFF; line-height: 1.6;">${detailData.analysis}</div>
+            </div>
+          ` : ''}
+          
+          ${detailData.advantages ? `
+            <div style="
+              margin-bottom: 15px;
+              padding: 15px;
+              border-radius: 8px;
+              background: rgba(64, 224, 208, 0.05);
+              border: 1px solid rgba(64, 224, 208, 0.1);
+            ">
+              <strong style="
+                color: #40E0D0;
+                display: block;
+                margin-bottom: 8px;
+                font-size: 1.1rem;
+              ">${t('match.advantages')}：</strong>
+              <div style="color: #E0FFFF; line-height: 1.6;">${detailData.advantages}</div>
+            </div>
+          ` : ''}
+          
+          ${detailData.disadvantages ? `
+            <div style="
+              margin-bottom: 15px;
+              padding: 15px;
+              border-radius: 8px;
+              background: rgba(64, 224, 208, 0.05);
+              border: 1px solid rgba(64, 224, 208, 0.1);
+            ">
+              <strong style="
+                color: #40E0D0;
+                display: block;
+                margin-bottom: 8px;
+                font-size: 1.1rem;
+              ">${t('match.disadvantages')}：</strong>
+              <div style="color: #E0FFFF; line-height: 1.6;">${detailData.disadvantages}</div>
+            </div>
+          ` : ''}
+          
+          ${detailData.suggestions ? `
+            <div style="
+              margin-bottom: 15px;
+              padding: 15px;
+              border-radius: 8px;
+              background: rgba(64, 224, 208, 0.05);
+              border: 1px solid rgba(64, 224, 208, 0.1);
+            ">
+              <strong style="
+                color: #40E0D0;
+                display: block;
+                margin-bottom: 8px;
+                font-size: 1.1rem;
+              ">${t('match.suggestions')}：</strong>
+              <div style="color: #E0FFFF; line-height: 1.6;">${detailData.suggestions}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      
+      // 使用自定义样式的消息框
+      ElMessageBox.alert(detailContent, t('history.matchDetails'), {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: t('history.close'),
+        customClass: 'match-detail-dialog',
+        showClose: true,
+        closeOnClickModal: false
+      });
     } else {
       ElMessage.error(response.message || t('history.getDetailsFailed'));
     }
@@ -270,11 +317,6 @@ const viewDetail = async (item) => {
     console.error('获取详情失败:', error);
     ElMessage.error(t('history.getDetailsFailedRetry'));
   }
-};
-
-// 关闭详情对话框
-const handleCloseDetail = () => {
-  detailVisible.value = false;
 };
 
 // 修改删除记录函数
@@ -490,21 +532,14 @@ onMounted(() => {
   background: #1e2c2c !important;
   color: #E0FFFF !important;
   padding: 20px !important;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
 }
 
 .match-detail-dialog .el-message-box__btns {
   background: #1e2c2c !important;
   padding: 10px 20px 20px !important;
   border-top: 1px solid rgba(64, 224, 208, 0.2) !important;
-}
-
-/* 内容区域的样式 */
-.match-detail-content > div {
-  background: #243333 !important;  /* 稍微浅一点的深青色用于内容块 */
-  border: 1px solid rgba(64, 224, 208, 0.2) !important;
-  margin-bottom: 15px !important;
-  padding: 15px !important;
-  border-radius: 8px !important;
 }
 
 .match-detail-dialog .el-button {

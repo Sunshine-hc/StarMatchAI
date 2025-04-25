@@ -9,6 +9,13 @@ export default {
         user: 'User',
         userInitial: 'U'
     },
+    profile: {
+        title: 'Profile',
+        memberSince: 'Member Since',
+        accountInfo: 'Account Information',
+        email: 'Email',
+        noEmail: 'No email set'
+    },
     history: {
         title: 'Match History',
         refresh: 'Refresh',

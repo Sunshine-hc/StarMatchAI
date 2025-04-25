@@ -29,6 +29,12 @@ const routes = [
         meta: { title: 'AI星座匹配 - 历史记录', requiresAuth: true }
     },
     {
+        path: '/profile',
+        name: 'Profile',
+        component: () => import('../views/profile/index.vue'),
+        meta: { title: 'AI星座匹配 - 个人中心', requiresAuth: true }
+    },
+    {
         path: '/',
         name: 'Layout',
         component: () => import('../layout/index.vue'),
