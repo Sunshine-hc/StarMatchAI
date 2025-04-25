@@ -9,6 +9,37 @@ export default {
         user: '用户',
         userInitial: '用'
     },
+    history: {
+        title: '匹配历史记录',
+        refresh: '刷新',
+        loading: '加载中...',
+        noRecords: '暂无匹配记录',
+        goToMatch: '去匹配',
+        timeGroups: {
+            today: '今日',
+            yesterday: '昨天',
+            last7days: '7天内',
+            last30days: '30天内'
+        },
+        and: '与',
+        viewDetails: '查看详情',
+        delete: '删除',
+        matchDetails: '匹配详情',
+        matchAnalysis: '的匹配分析',
+        close: '关闭',
+        fetchFailed: '获取历史记录失败',
+        fetchFailedRetry: '获取历史记录失败，请稍后重试',
+        viewDetailsForMore: '查看详情了解更多',
+        getDetailsFailed: '获取详情失败',
+        getDetailsFailedRetry: '获取详情失败，请稍后重试',
+        confirmDelete: '确定要删除这条匹配记录吗？',
+        prompt: '提示',
+        confirm: '确定',
+        cancel: '取消',
+        deleteSuccess: '删除成功',
+        deleteFailed: '删除失败',
+        deleteFailedRetry: '删除失败，请稍后重试'
+    },
     match: {
         title: 'AI星座匹配测试',
         birthday: '生日选择',

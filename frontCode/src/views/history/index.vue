@@ -8,12 +8,12 @@
       <el-card class="history-card">
         <template #header>
           <div class="card-header">
-            <span class="history-title">匹配历史记录</span>
+            <span class="history-title">{{ $t('history.title') }}</span>
             <div 
               class="refresh-button" 
               :class="{ 'refreshing': isRefreshing }" 
               @click="refreshHistory"
-              title="刷新"
+              :title="$t('history.refresh')"
             >
               <el-icon class="refresh-icon">
                 <Refresh />
@@ -28,13 +28,13 @@
             <span></span>
             <span></span>
           </div>
-          <p>加载中...</p>
+          <p>{{ $t('history.loading') }}</p>
         </div>
         
         <div v-else-if="Object.keys(groupedHistory).length === 0" class="empty-container">
-          <el-empty description="暂无匹配记录" :image-size="200">
+          <el-empty :description="$t('history.noRecords')" :image-size="200">
             <el-button type="primary" @click="$router.push('/')" class="action-button">
-              去匹配
+              {{ $t('history.goToMatch') }}
             </el-button>
           </el-empty>
         </div>
@@ -43,7 +43,7 @@
           <!-- 按时间线分组展示 -->
           <div v-for="(group, groupName) in groupedHistory" :key="groupName" class="history-group">
             <div class="time-divider">
-              <span class="time-label">{{ groupName }}</span>
+              <span class="time-label">{{ $t(`history.timeGroups.${groupName}`) }}</span>
               <div class="divider-line"></div>
             </div>
             
@@ -52,9 +52,9 @@
                 <div class="match-info">
                   <div class="match-date">{{ formatDate(item.createdAt) }}</div>
                   <div class="match-signs">
-                    <span class="sign">{{ item.person1Sign }}({{ formatBirthday(item.person1Birthday) }})</span>
-                    <span class="connector">与</span>
-                    <span class="sign">{{ item.person2Sign }}({{ formatBirthday(item.person2Birthday) }})</span>
+                    <span class="sign">{{ $t(`zodiac.${item.person1Sign}`) }}({{ formatBirthday(item.person1Birthday) }})</span>
+                    <span class="connector">{{ $t('history.and') }}</span>
+                    <span class="sign">{{ $t(`zodiac.${item.person2Sign}`) }}({{ formatBirthday(item.person2Birthday) }})</span>
                   </div>
                   <div class="match-score">
                     <div class="score-circle" :style="{ background: getScoreColor(item.matchScore) }">
@@ -69,10 +69,10 @@
                 
                 <div class="match-actions">
                   <el-button type="primary" size="small" @click="viewDetail(item)" class="action-button">
-                    查看详情
+                    {{ $t('history.viewDetails') }}
                   </el-button>
                   <el-button type="danger" size="small" @click="handleDelete(item.id)" class="delete-button">
-                    删除
+                    {{ $t('history.delete') }}
                   </el-button>
                 </div>
               </el-card>
@@ -86,14 +86,14 @@
   <!-- 匹配详情对话框 -->
   <el-dialog
     v-model="detailVisible"
-    title="匹配详情"
+    :title="$t('history.matchDetails')"
     width="90%"
     :close-on-click-modal="false"
     custom-class="match-detail-dialog"
     :before-close="handleCloseDetail"
   >
     <div class="match-detail-container">
-      <h2 class="match-title">{{ detailData.person1Sign }} 与 {{ detailData.person2Sign }} 的匹配分析</h2>
+      <h2 class="match-title">{{ $t(`zodiac.${detailData.person1Sign}`) }} {{ $t('history.and') }} {{ $t(`zodiac.${detailData.person2Sign}`) }} {{ $t('history.matchAnalysis') }}</h2>
       
       <div class="score-display">
         <div class="score-circle" :style="{ background: getScoreColor(detailData.matchScore) }">
@@ -103,26 +103,26 @@
       
       <div class="detail-content">
         <div class="detail-section">
-          <h3 class="section-title">分析:</h3>
+          <h3 class="section-title">{{ $t('match.analysis') }}:</h3>
           <p class="section-text">{{ detailData.analysis }}</p>
         </div>
         
         <div class="detail-section">
-          <h3 class="section-title">优势:</h3>
+          <h3 class="section-title">{{ $t('match.advantages') }}:</h3>
           <div class="advantage-list">
             <p class="section-text">{{ detailData.advantages }}</p>
           </div>
         </div>
         
         <div class="detail-section">
-          <h3 class="section-title">劣势:</h3>
+          <h3 class="section-title">{{ $t('match.disadvantages') }}:</h3>
           <div class="disadvantage-list">
             <p class="section-text">{{ detailData.disadvantages }}</p>
           </div>
         </div>
         
         <div class="detail-section">
-          <h3 class="section-title">建议:</h3>
+          <h3 class="section-title">{{ $t('match.suggestions') }}:</h3>
           <div class="suggestion-list">
             <p class="section-text">{{ detailData.suggestions }}</p>
           </div>
@@ -132,7 +132,7 @@
     
     <template #footer>
       <div class="dialog-footer">
-        <el-button class="close-button" @click="handleCloseDetail">关闭</el-button>
+        <el-button class="close-button" @click="handleCloseDetail">{{ $t('history.close') }}</el-button>
       </div>
     </template>
   </el-dialog>
@@ -142,20 +142,34 @@
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { getMatchRecords, getMatchRecordDetail, deleteMatchRecord } from '@/api/matchRecord';
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh } from '@element-plus/icons-vue';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const loading = ref(true);
 const historyList = ref([]);
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
+// 临时存放对话框数据
+const detailVisible = ref(false);
+const detailData = ref({
+  person1Sign: '',
+  person2Sign: '',
+  matchScore: 0,
+  analysis: '',
+  advantages: '',
+  disadvantages: '',
+  suggestions: ''
+});
+
 // 计算时间分组
 const groupedHistory = computed(() => {
   const groups = {
-    '今日': [],
-    '昨天': [],
-    '7天内': [],
-    '30天内': []
+    'today': [],
+    'yesterday': [],
+    'last7days': [],
+    'last30days': []
   };
   
   const yesterday = new Date(today);
@@ -171,13 +185,13 @@ const groupedHistory = computed(() => {
     const itemDate = new Date(item.createdAt); // 使用createdAt字段
     
     if (itemDate >= today) {
-      groups['今日'].push(item);
+      groups['today'].push(item);
     } else if (itemDate >= yesterday) {
-      groups['昨天'].push(item);
+      groups['yesterday'].push(item);
     } else if (itemDate >= sevenDaysAgo) {
-      groups['7天内'].push(item);
+      groups['last7days'].push(item);
     } else if (itemDate >= thirtyDaysAgo) {
-      groups['30天内'].push(item);
+      groups['last30days'].push(item);
     }
   });
   
@@ -207,11 +221,11 @@ const loadHistoryData = async () => {
       // 直接使用后端返回的数据
       historyList.value = response.data || [];
     } else {
-      ElMessage.error(response.message || '获取历史记录失败');
+      ElMessage.error(response.message || t('history.fetchFailed'));
     }
   } catch (error) {
     console.error('获取历史记录失败:', error);
-    ElMessage.error('获取历史记录失败，请稍后重试');
+    ElMessage.error(t('history.fetchFailedRetry'));
   } finally {
     loading.value = false;
   }
@@ -230,16 +244,16 @@ const getDisplayContent = (item) => {
   // 组合优势和劣势
   let content = '';
   if (item.advantages) {
-    content += '优势: ' + item.advantages + ' ';
+    content += t('match.advantages') + ': ' + item.advantages + ' ';
   }
   if (item.disadvantages) {
-    content += '劣势: ' + item.disadvantages;
+    content += t('match.disadvantages') + ': ' + item.disadvantages;
   }
   
   // 如果内容太长，截取
   return content.length > 100 
     ? content.substring(0, 100) + '...' 
-    : content || '查看详情了解更多';
+    : content || t('history.viewDetailsForMore');
 };
 
 // 查看详情
@@ -247,138 +261,31 @@ const viewDetail = async (item) => {
   try {
     const response = await getMatchRecordDetail(item.id);
     if (response.code === 200) {
-      // 构建详情内容HTML
-      const detailContent = `
-        <div class="match-detail-content" style="max-height: 60vh; overflow-y: auto; padding: 10px;">
-          <h3 style="
-            text-align: center;
-            color: #40E0D0;
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: rgba(64, 224, 208, 0.1);
-            border-radius: 8px;
-          ">${item.person1Sign} 与 ${item.person2Sign} 的匹配分析</h3>
-          
-          <div style="text-align: center; margin-bottom: 20px;">
-            <span style="
-              display: inline-block;
-              width: 80px;
-              height: 80px;
-              line-height: 80px;
-              border-radius: 50%;
-              background: ${getScoreColor(item.matchScore)};
-              color: white;
-              font-size: 1.5rem;
-              font-weight: bold;
-              text-align: center;
-              box-shadow: 0 0 15px rgba(64, 224, 208, 0.3);
-            ">
-              ${item.matchScore}%
-            </span>
-          </div>
-          
-          ${item.analysis ? `
-            <div style="
-              margin-bottom: 15px;
-              padding: 15px;
-              border-radius: 8px;
-              background: rgba(64, 224, 208, 0.05);
-              border: 1px solid rgba(64, 224, 208, 0.1);
-            ">
-              <strong style="
-                color: #40E0D0;
-                display: block;
-                margin-bottom: 8px;
-                font-size: 1.1rem;
-              ">分析：</strong>
-              <div style="color: #E0FFFF; line-height: 1.6;">${item.analysis}</div>
-            </div>
-          ` : ''}
-          
-          ${item.advantages ? `
-            <div style="
-              margin-bottom: 15px;
-              padding: 15px;
-              border-radius: 8px;
-              background: rgba(64, 224, 208, 0.05);
-              border: 1px solid rgba(64, 224, 208, 0.1);
-            ">
-              <strong style="
-                color: #40E0D0;
-                display: block;
-                margin-bottom: 8px;
-                font-size: 1.1rem;
-              ">优势：</strong>
-              <div style="color: #E0FFFF; line-height: 1.6;">${item.advantages}</div>
-            </div>
-          ` : ''}
-          
-          ${item.disadvantages ? `
-            <div style="
-              margin-bottom: 15px;
-              padding: 15px;
-              border-radius: 8px;
-              background: rgba(64, 224, 208, 0.05);
-              border: 1px solid rgba(64, 224, 208, 0.1);
-            ">
-              <strong style="
-                color: #40E0D0;
-                display: block;
-                margin-bottom: 8px;
-                font-size: 1.1rem;
-              ">劣势：</strong>
-              <div style="color: #E0FFFF; line-height: 1.6;">${item.disadvantages}</div>
-            </div>
-          ` : ''}
-          
-          ${item.suggestions ? `
-            <div style="
-              margin-bottom: 15px;
-              padding: 15px;
-              border-radius: 8px;
-              background: rgba(64, 224, 208, 0.05);
-              border: 1px solid rgba(64, 224, 208, 0.1);
-            ">
-              <strong style="
-                color: #40E0D0;
-                display: block;
-                margin-bottom: 8px;
-                font-size: 1.1rem;
-              ">建议：</strong>
-              <div style="color: #E0FFFF; line-height: 1.6;">${item.suggestions}</div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-      
-      // 使用自定义样式的消息框
-      ElMessageBox.alert(detailContent, '匹配详情', {
-        dangerouslyUseHTMLString: true,
-        confirmButtonText: '关闭',
-        customClass: 'match-detail-dialog',
-        showClose: true,
-        closeOnClickModal: false
-      });
+      detailData.value = response.data || item;
+      detailVisible.value = true;
     } else {
-      ElMessage.error(response.message || '获取详情失败');
+      ElMessage.error(response.message || t('history.getDetailsFailed'));
     }
   } catch (error) {
     console.error('获取详情失败:', error);
-    ElMessage.error('获取详情失败，请稍后重试');
+    ElMessage.error(t('history.getDetailsFailedRetry'));
   }
+};
+
+// 关闭详情对话框
+const handleCloseDetail = () => {
+  detailVisible.value = false;
 };
 
 // 修改删除记录函数
 const handleDelete = (id) => {
   // 使用自定义样式的确认对话框
   ElMessageBox.confirm(
-    '<i class="el-icon-warning" style="color: #FFA500; margin-right: 8px;"></i>确定要删除这条匹配记录吗？',
-    '提示',
+    t('history.confirmDelete'),
+    t('history.prompt'),
     {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+      confirmButtonText: t('history.confirm'),
+      cancelButtonText: t('history.cancel'),
       customClass: 'starry-confirm-box',
       confirmButtonClass: 'starry-confirm-button',
       cancelButtonClass: 'starry-cancel-button',
@@ -389,14 +296,14 @@ const handleDelete = (id) => {
       const response = await deleteMatchRecord(id);
       if (response.code === 200) {
         ElMessage({
-          message: '删除成功',
+          message: t('history.deleteSuccess'),
           type: 'success',
           customClass: 'starry-message'
         });
         loadHistoryData();
       } else {
         ElMessage({
-          message: response.message || '删除失败',
+          message: response.message || t('history.deleteFailed'),
           type: 'error',
           customClass: 'starry-message'
         });
@@ -404,7 +311,7 @@ const handleDelete = (id) => {
     } catch (error) {
       console.error('删除失败:', error);
       ElMessage({
-        message: '删除失败，请稍后重试',
+        message: t('history.deleteFailedRetry'),
         type: 'error',
         customClass: 'starry-message'
       });
