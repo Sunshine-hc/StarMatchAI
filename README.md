@@ -3,7 +3,7 @@
 
 目前只接入了DeepSeek、通义千问-Turbo大模型，后续可以新增更多的大模型以及慢慢扩展其他功能......
 
-V1版地址：http://117.72.54.188
+V1版地址：https://hcfutureai.top
 
 ## 页面展示
 ![img.png](image/img1.png)
@@ -74,5 +74,6 @@ V1版地址：http://117.72.54.188
 [MIT License](LICENSE)
 
 ## 联系方式
+Emai: 1632316400@qq.com
 
 如有问题或建议，欢迎提出 Issue 或 PR。
