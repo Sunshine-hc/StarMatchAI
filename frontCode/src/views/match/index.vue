@@ -168,7 +168,7 @@ import { calculateMatchStream } from '@/api/match'
 import { ElMessage } from 'element-plus'
 import DateTimePicker from '@/components/DateTimePicker/index.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const matchFormRef = ref(null)
 const loading = ref(false)
 const showResult = ref(false)
@@ -202,7 +202,16 @@ const displayContent = reactive({
 const matchForm = ref({
     person1Birthday: '',
     person2Birthday: '',
+    // 回答的语言，默认是中文，如果网页切换语言，这里也跟着切换
+    language: locale.value,
+    // 默认使用 qwen-turbo 模型
     aiModel: 'qwen-turbo'
+})
+
+// 监听语言变化，更新表单中的语言参数
+watch(locale, (newLocale) => {
+    console.log('语言已切换为:', newLocale)
+    matchForm.value.language = newLocale
 })
 
 const rules = {
@@ -348,8 +357,8 @@ const handleSubmit = async () => {
 
 // 修改AI模型选项
 const aiModelOptions = [
-    { label: t('models.qwenTurbo'), value: 'qwen-turbo' },
-    { label: t('models.deepseek'), value: 'deepseek-chat' }
+    { value: 'qwen-turbo' },
+    { value: 'deepseek-chat' }
 ]
 
 // 添加星座图标映射

@@ -57,7 +57,9 @@ export default {
     },
     models: {
         qwenTurbo: 'Qwen-Turbo',
-        deepseek: 'DeepSeek'
+        'qwen-turbo': 'Qwen-Turbo',
+        deepseek: 'DeepSeek',
+        'deepseek-chat': 'DeepSeek Chat'
     },
     zodiac: {
         '白羊座': 'Aries',

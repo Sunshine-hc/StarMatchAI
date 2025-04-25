@@ -57,7 +57,9 @@ export default {
     },
     models: {
         qwenTurbo: '通义千问-Turbo',
-        deepseek: 'DeepSeek'
+        'qwen-turbo': '通义千问-Turbo',
+        deepseek: 'DeepSeek',
+        'deepseek-chat': 'DeepSeek Chat'
     },
     zodiac: {
         '白羊座': '白羊座',

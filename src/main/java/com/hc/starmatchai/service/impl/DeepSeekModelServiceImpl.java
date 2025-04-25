@@ -37,6 +37,9 @@ import cn.hutool.core.util.StrUtil;
 
 import javax.annotation.Resource;
 import com.hc.starmatchai.common.util.AiAnalysisUtil;
+import com.hc.starmatchai.common.enums.LanguageEnum;
+import com.hc.starmatchai.common.util.PromptTemplateUtil;
+import com.hc.starmatchai.common.util.PromptTemplateUtil.SectionMarkers;
 
 @Slf4j
 @Service("deepseek-chatModelService")
@@ -53,6 +56,9 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
     @Resource
     private AiAnalysisUtil aiAnalysisUtil;
+
+    @Resource
+    private PromptTemplateUtil promptTemplateUtil;
 
     private final ConcurrentHashMap<SseEmitter, AtomicBoolean> emitterStatusMap = new ConcurrentHashMap<>();
 
@@ -79,7 +85,8 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             log.info("星座匹配分析完成, 匹配得分: {}", result.get("score"));
             return result;
         } catch (Exception e) {
-            log.error("DeepSeek API调用失败, sign1={}, sign2={}, error={}", sign1.getChineseName(), sign2.getChineseName(), e.getMessage(), e);
+            log.error("DeepSeek API调用失败, sign1={}, sign2={}, error={}", sign1.getChineseName(), sign2.getChineseName(),
+                    e.getMessage(), e);
             throw new BusinessException("AI分析失败，请稍后重试");
         }
     }
@@ -91,6 +98,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
         Date person1Birthday = request.getPerson1Birthday();
         Date person2Birthday = request.getPerson2Birthday();
         String aiModel = request.getAiModel();
+        String language = request.getLanguage();
 
         // 初始化emitter状态为活跃
         AtomicBoolean isActive = new AtomicBoolean(true);
@@ -126,22 +134,26 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(startEvent)));
 
             log.info("开始进行星座匹配分析, sign1={}, sign2={}", sign1.getChineseName(), sign2.getChineseName());
-            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday);
+            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday, language);
             log.info("请求AI模型参数：{}", JSONUtil.toJsonStr(prompt));
+
+            // 获取对应语言的标记
+            final Map<String, SectionMarkers> sectionMarkersMap = promptTemplateUtil.getSectionMarkersMap();
+            final SectionMarkers markers = sectionMarkersMap.getOrDefault(language,
+                    sectionMarkersMap.get(LanguageEnum.ZH_CN.getCode()));
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", aiModel);
             requestBody.put("stream", true);
-            requestBody.put("temperature", 0.7);
-            Map<String, String> message = new HashMap<>();
-            message.put("role", "user");
-            message.put("content", prompt);
-            List<Map<String, String>> messages = new ArrayList<>();
-            messages.add(message);
-            requestBody.put("messages", messages);
+            requestBody.put("messages", Collections.singletonList(
+                    new HashMap<String, String>() {
+                        {
+                            put("role", "user");
+                            put("content", prompt);
+                        }
+                    }));
             String requestJson = JSONUtil.toJsonStr(requestBody);
-            log.info("请求大模型API参数：{}", requestJson);
 
             // 创建OkHttp客户端
             OkHttpClient client = new OkHttpClient.Builder()
@@ -150,7 +162,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .build();
 
-            Request aiApiRequest = new Request.Builder()
+            Request apiRequest = new Request.Builder()
                     .url(apiUrl)
                     .post(RequestBody.create(MediaType.parse("application/json"), requestJson))
                     .header("Authorization", "Bearer " + apiKey)
@@ -161,7 +173,7 @@ public class DeepSeekModelServiceImpl implements AIModelService {
             // 用于标记各部分是否已发送
             final boolean[] sectionsSent = new boolean[5];
 
-            client.newCall(aiApiRequest).enqueue(new Callback() {
+            client.newCall(apiRequest).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     log.error("DeepSeek API请求失败", e);
@@ -170,112 +182,81 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
-                    log.info("开始处理流式响应");
                     if (!response.isSuccessful()) {
-                        throw new BusinessException("AI服务调用失败: " + response.code());
+                        String errorBody = response.body() != null ? response.body().string() : "无响应内容";
+                        log.error("DeepSeek API调用失败: {}, 错误信息: {}", response.code(), errorBody);
+                        safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
+                        return;
                     }
 
                     try (ResponseBody responseBody = response.body()) {
                         if (responseBody == null) {
-                            throw new BusinessException("AI响应为空");
+                            log.error("DeepSeek API响应为空");
+                            safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
+                            return;
                         }
 
                         BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(responseBody.byteStream(), StandardCharsets.UTF_8), 8192);
-
-                        // 预定义关键标记，避免重复创建字符串
-                        final String SCORE_MARKER = "匹配得分：";
-                        final String ANALYSIS_MARKER = "整体分析：";
-                        final String ADVANTAGES_MARKER = "优势特点：";
-                        final String DISADVANTAGES_MARKER = "潜在问题：";
-                        final String SUGGESTIONS_MARKER = "相处建议：";
+                                new InputStreamReader(responseBody.byteStream(), StandardCharsets.UTF_8));
 
                         String line;
-                        while ((line = reader.readLine()) != null) {
-                            if (!line.startsWith("data: ")) {
-                                continue; // 快速跳过非数据行
-                            }
-
-                            String data = line.substring(6).trim();
-
-                            // 快速检查是否完成
-                            if ("[DONE]".equals(data)) {
-                                // 处理最后一部分内容
-                                processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo);
-                                break;
-                            }
-
-                            // 快速检查是否包含content字段，避免不必要的JSON解析
-                            if (data.indexOf("\"content\"") == -1) {
+                        while ((line = reader.readLine()) != null && isActive.get()) {
+                            if (!line.startsWith("data:")) {
                                 continue;
                             }
 
+                            // 如果流结束标记，处理完最后的内容
+                            if (line.equals("data: [DONE]")) {
+                                processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo,
+                                        markers);
+                                break;
+                            }
+
+                            String data = line.substring(5).trim();
                             try {
-                                // 使用JSONUtil解析，保持与原代码兼容
-                                JSONObject chunk = JSONUtil.parseObj(data);
-                                String content = chunk.getJSONArray("choices")
-                                        .getJSONObject(0)
-                                        .getJSONObject("delta")
-                                        .getStr("content", "");
+                                JSONObject jsonObject = JSONUtil.parseObj(data);
+                                JSONObject choice = jsonObject.getJSONArray("choices").getJSONObject(0);
+                                if (choice.containsKey("delta")) {
+                                    JSONObject delta = choice.getJSONObject("delta");
+                                    if (delta.containsKey("content")) {
+                                        String content = delta.getStr("content");
+                                        if (content != null && !content.isEmpty()) {
+                                            fullContent.append(content);
 
-                                if (content != null && !content.isEmpty()) {
-                                    fullContent.append(content);
+                                            // 检查是否有新的部分需要处理
+                                            boolean shouldProcess = content.contains("\n\n") ||
+                                                    content.contains(markers.getScoreMarker()) ||
+                                                    content.contains(markers.getAnalysisMarker()) ||
+                                                    content.contains(markers.getAdvantagesMarker()) ||
+                                                    content.contains(markers.getDisadvantagesMarker()) ||
+                                                    content.contains(markers.getSuggestionsMarker());
 
-                                    // 只有在内容中包含关键标记时才处理
-                                    boolean shouldProcess = content.indexOf("\n\n") != -1 ||
-                                            content.indexOf(SCORE_MARKER) != -1 ||
-                                            content.indexOf(ANALYSIS_MARKER) != -1 ||
-                                            content.indexOf(ADVANTAGES_MARKER) != -1 ||
-                                            content.indexOf(DISADVANTAGES_MARKER) != -1 ||
-                                            content.indexOf(SUGGESTIONS_MARKER) != -1;
-
-                                    if (shouldProcess) {
-                                        // 检查是否所有部分都已处理，如果是则跳过
-                                        boolean allProcessed = true;
-                                        for (boolean sent : sectionsSent) {
-                                            if (!sent) {
-                                                allProcessed = false;
-                                                break;
+                                            if (shouldProcess) {
+                                                processFullContent(fullContent.toString(), emitter, sectionsSent,
+                                                        userId, matchNo, markers);
                                             }
-                                        }
-
-                                        if (!allProcessed) {
-                                            processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo);
                                         }
                                     }
                                 }
                             } catch (Exception e) {
-                                // 简化错误日志，减少开销
-                                log.error("解析错误: {}", e.getMessage());
+                                log.error("解析DeepSeek响应失败: " + e.getMessage(), e);
                             }
                         }
-                        log.info("结束处理流式响应");
                     }
 
-                    // 在处理完成后，安全地发送完成事件
                     safelySendEvent(emitter, "complete", "分析完成");
                 }
 
-                // 优化processFullContent方法
-                void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent, Long userId, String matchNo)
-                        throws IOException {
-
-                    // 预定义关键标记
-                    final String SCORE_MARKER = "匹配得分：";
-                    final String ANALYSIS_MARKER = "整体分析：";
-                    final String ADVANTAGES_MARKER = "优势特点：";
-                    final String DISADVANTAGES_MARKER = "潜在问题：";
-                    final String SUGGESTIONS_MARKER = "相处建议：";
-
+                private void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent, Long userId,
+                        String matchNo, SectionMarkers markers) throws IOException {
                     // 处理匹配得分
                     if (!sectionsSent[0]) {
-                        int scoreIndex = content.indexOf(SCORE_MARKER);
+                        int scoreIndex = content.indexOf(markers.getScoreMarker());
                         if (scoreIndex >= 0) {
-                            int scoreStart = scoreIndex + SCORE_MARKER.length();
+                            int scoreStart = scoreIndex + markers.getScoreMarker().length();
                             int scoreEnd = content.indexOf('\n', scoreStart);
                             if (scoreEnd > scoreStart) {
                                 String scoreStr = content.substring(scoreStart, scoreEnd).trim();
-                                // 使用更高效的方式提取数字
                                 StringBuilder sb = new StringBuilder();
                                 for (int i = 0; i < scoreStr.length(); i++) {
                                     char c = scoreStr.charAt(i);
@@ -284,9 +265,9 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                                     }
                                 }
                                 scoreStr = sb.toString();
-
                                 if (!scoreStr.isEmpty()) {
-                                    sendAnalysisSection(emitter, AiAnalysisConstants.AnalysisField.MATCH_SCORE, scoreStr, userId, matchNo);
+                                    sendAnalysisSection(emitter, AiAnalysisConstants.AnalysisField.MATCH_SCORE,
+                                            scoreStr, userId, matchNo);
                                     sectionsSent[0] = true;
                                 }
                             }
@@ -295,28 +276,31 @@ public class DeepSeekModelServiceImpl implements AIModelService {
 
                     // 处理整体分析
                     if (!sectionsSent[1]) {
-                        sectionsSent[1] = processSection(content, ANALYSIS_MARKER, AiAnalysisConstants.AnalysisField.ANALYSIS, emitter, userId, matchNo);
+                        sectionsSent[1] = processSection(content, markers.getAnalysisMarker(),
+                                AiAnalysisConstants.AnalysisField.ANALYSIS, emitter, userId, matchNo);
                     }
 
                     // 处理优势特点
                     if (!sectionsSent[2]) {
-                        sectionsSent[2] = processSection(content, ADVANTAGES_MARKER, AiAnalysisConstants.AnalysisField.ADVANTAGES, emitter, userId, matchNo);
+                        sectionsSent[2] = processSection(content, markers.getAdvantagesMarker(),
+                                AiAnalysisConstants.AnalysisField.ADVANTAGES, emitter, userId, matchNo);
                     }
 
                     // 处理潜在问题
                     if (!sectionsSent[3]) {
-                        sectionsSent[3] = processSection(content, DISADVANTAGES_MARKER, AiAnalysisConstants.AnalysisField.DISADVANTAGES, emitter, userId, matchNo);
+                        sectionsSent[3] = processSection(content, markers.getDisadvantagesMarker(),
+                                AiAnalysisConstants.AnalysisField.DISADVANTAGES, emitter, userId, matchNo);
                     }
 
                     // 处理相处建议
                     if (!sectionsSent[4]) {
-                        sectionsSent[4] = processSection(content, SUGGESTIONS_MARKER, AiAnalysisConstants.AnalysisField.SUGGESTIONS, emitter, userId, matchNo);
+                        sectionsSent[4] = processSection(content, markers.getSuggestionsMarker(),
+                                AiAnalysisConstants.AnalysisField.SUGGESTIONS, emitter, userId, matchNo);
                     }
                 }
 
-                // 提取公共处理逻辑，减少代码重复
-                private boolean processSection(String content, String marker, String eventType,
-                                               SseEmitter emitter, Long userId, String matchNo) throws IOException {
+                private boolean processSection(String content, String marker, String eventType, SseEmitter emitter,
+                        Long userId, String matchNo) throws IOException {
                     int sectionIndex = content.indexOf(marker);
                     if (sectionIndex >= 0) {
                         int sectionStart = sectionIndex + marker.length();
@@ -326,11 +310,11 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                         if (sectionEnd > sectionStart) {
                             sectionText = content.substring(sectionStart, sectionEnd).trim();
                         } else {
-                            // 对于最后一部分，可能没有结束标记，需要判断是否为完整部分
                             sectionText = content.substring(sectionStart).trim();
-                            if (!sectionText.endsWith("。") && !sectionText.endsWith("！")
-                                    && !sectionText.endsWith("？")) {
-                                // 如果不是以句号、感叹号或问号结尾，认为不是完整部分，不处理
+                            // 检查是否为完整的段落，通过检查结尾是否为中英文的句号、感叹号或问号
+                            if (!sectionText.endsWith("。") && !sectionText.endsWith("！") && !sectionText.endsWith("？")
+                                    && !sectionText.endsWith(".") && !sectionText.endsWith("!")
+                                    && !sectionText.endsWith("?")) {
                                 return false;
                             }
                         }
@@ -344,34 +328,19 @@ public class DeepSeekModelServiceImpl implements AIModelService {
                     return false;
                 }
             });
-
         } catch (Exception e) {
-            log.error("DeepSeek API流式请求异常: {}", e.getMessage(), e);
+            log.error("DeepSeek API流式调用异常", e);
             safelySendEvent(emitter, "error", "AI服务调用失败，请稍后重试");
         }
     }
 
     private String buildPrompt(ZodiacSign sign1, Date person1Birthday, ZodiacSign sign2, Date person2Birthday) {
-        String person1BirthdayStr = DateUtil.format(person1Birthday, "yyyy-MM-dd HH:mm");
-        String person2BirthdayStr = DateUtil.format(person2Birthday, "yyyy-MM-dd HH:mm");
+        return buildPrompt(sign1, person1Birthday, sign2, person2Birthday, LanguageEnum.ZH_CN.getCode());
+    }
 
-        StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append("作为一位专业的占星师，请分析")
-                .append(person1BirthdayStr)
-                .append("出生的人")
-                .append(sign1.getChineseName())
-                .append("和")
-                .append(person2BirthdayStr)
-                .append("出生的人")
-                .append(sign2.getChineseName())
-                .append("的匹配关系。请严格按照以下格式输出：\n\n")
-                .append("匹配得分：[请给出0-100的匹配度评分，评分更细一点不要全是5的倍数，只需要数字]\n\n")
-                .append("整体分析：[从星座特质的角度分析两个星座的整体匹配程度]\n\n")
-                .append("优势特点：[分析两个星座在感情中的互补优势]\n\n")
-                .append("潜在问题：[指出可能存在的性格冲突或沟通障碍]\n\n")
-                .append("相处建议：[给出具体的相处建议和改善方法]\n\n")
-                .append("请确保严格按照以上格式回复，每个部分都要有实质性的内容。");
-        return promptBuilder.toString();
+    private String buildPrompt(ZodiacSign sign1, Date person1Birthday, ZodiacSign sign2, Date person2Birthday,
+            String language) {
+        return promptTemplateUtil.getMatchAnalysisPrompt(sign1, person1Birthday, sign2, person2Birthday, language);
     }
 
     private String callDeepSeekAPI(String prompt) {

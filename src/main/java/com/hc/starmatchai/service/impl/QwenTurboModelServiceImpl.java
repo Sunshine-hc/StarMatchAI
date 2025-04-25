@@ -2,15 +2,16 @@ package com.hc.starmatchai.service.impl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.hc.starmatchai.common.constant.AiAnalysisConstants;
 import com.hc.starmatchai.common.dto.model.MatchRequest;
 import com.hc.starmatchai.common.dto.model.ZodiacSign;
+import com.hc.starmatchai.common.enums.LanguageEnum;
 import com.hc.starmatchai.common.exception.BusinessException;
 import com.hc.starmatchai.common.util.AiAnalysisUtil;
+import com.hc.starmatchai.common.util.PromptTemplateUtil;
+import com.hc.starmatchai.common.util.PromptTemplateUtil.SectionMarkers;
 import com.hc.starmatchai.service.AIModelService;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -40,6 +41,9 @@ public class QwenTurboModelServiceImpl implements AIModelService {
     @Resource
     private AiAnalysisUtil aiAnalysisUtil;
 
+    @Resource
+    private PromptTemplateUtil promptTemplateUtil;
+
     private final ConcurrentHashMap<SseEmitter, AtomicBoolean> emitterStatusMap = new ConcurrentHashMap<>();
 
     @Override
@@ -54,6 +58,7 @@ public class QwenTurboModelServiceImpl implements AIModelService {
         Date person1Birthday = request.getPerson1Birthday();
         Date person2Birthday = request.getPerson2Birthday();
         String aiModel = request.getAiModel();
+        String language = request.getLanguage();
 
         // 初始化emitter状态为活跃
         AtomicBoolean isActive = new AtomicBoolean(true);
@@ -89,8 +94,13 @@ public class QwenTurboModelServiceImpl implements AIModelService {
             emitter.send(SseEmitter.event().data(JSONUtil.toJsonStr(startEvent)));
 
             log.info("开始进行星座匹配分析, sign1={}, sign2={}", sign1.getChineseName(), sign2.getChineseName());
-            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday);
+            String prompt = buildPrompt(sign1, person1Birthday, sign2, person2Birthday, language);
             log.info("请求AI模型参数：{}", JSONUtil.toJsonStr(prompt));
+
+            // 获取对应语言的标记
+            final Map<String, SectionMarkers> sectionMarkersMap = promptTemplateUtil.getSectionMarkersMap();
+            final SectionMarkers markers = sectionMarkersMap.getOrDefault(language,
+                    sectionMarkersMap.get(LanguageEnum.ZH_CN.getCode()));
 
             // 构建请求体
             Map<String, Object> requestBody = new HashMap<>();
@@ -146,13 +156,6 @@ public class QwenTurboModelServiceImpl implements AIModelService {
                         BufferedReader reader = new BufferedReader(
                                 new InputStreamReader(responseBody.byteStream(), StandardCharsets.UTF_8), 8192);
 
-                        // 预定义关键标记，避免重复创建字符串
-                        final String SCORE_MARKER = "匹配得分：";
-                        final String ANALYSIS_MARKER = "整体分析：";
-                        final String ADVANTAGES_MARKER = "优势特点：";
-                        final String DISADVANTAGES_MARKER = "潜在问题：";
-                        final String SUGGESTIONS_MARKER = "相处建议：";
-
                         String line;
                         while ((line = reader.readLine()) != null) {
                             if (!line.startsWith("data: ")) {
@@ -164,7 +167,8 @@ public class QwenTurboModelServiceImpl implements AIModelService {
                             // 快速检查是否完成
                             if ("[DONE]".equals(data)) {
                                 // 处理最后一部分内容
-                                processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo);
+                                processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo,
+                                        markers);
                                 break;
                             }
 
@@ -186,11 +190,11 @@ public class QwenTurboModelServiceImpl implements AIModelService {
 
                                     // 只有在内容中包含关键标记时才处理
                                     boolean shouldProcess = content.indexOf("\n\n") != -1 ||
-                                            content.indexOf(SCORE_MARKER) != -1 ||
-                                            content.indexOf(ANALYSIS_MARKER) != -1 ||
-                                            content.indexOf(ADVANTAGES_MARKER) != -1 ||
-                                            content.indexOf(DISADVANTAGES_MARKER) != -1 ||
-                                            content.indexOf(SUGGESTIONS_MARKER) != -1;
+                                            content.indexOf(markers.getScoreMarker()) != -1 ||
+                                            content.indexOf(markers.getAnalysisMarker()) != -1 ||
+                                            content.indexOf(markers.getAdvantagesMarker()) != -1 ||
+                                            content.indexOf(markers.getDisadvantagesMarker()) != -1 ||
+                                            content.indexOf(markers.getSuggestionsMarker()) != -1;
 
                                     if (shouldProcess) {
                                         // 检查是否所有部分都已处理，如果是则跳过
@@ -203,7 +207,8 @@ public class QwenTurboModelServiceImpl implements AIModelService {
                                         }
 
                                         if (!allProcessed) {
-                                            processFullContent(fullContent.toString(), emitter, sectionsSent, userId, matchNo);
+                                            processFullContent(fullContent.toString(), emitter, sectionsSent, userId,
+                                                    matchNo, markers);
                                         }
                                     }
                                 }
@@ -220,21 +225,14 @@ public class QwenTurboModelServiceImpl implements AIModelService {
                 }
 
                 // 优化processFullContent方法
-                void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent, Long userId, String matchNo)
-                        throws IOException {
-
-                    // 预定义关键标记
-                    final String SCORE_MARKER = "匹配得分：";
-                    final String ANALYSIS_MARKER = "整体分析：";
-                    final String ADVANTAGES_MARKER = "优势特点：";
-                    final String DISADVANTAGES_MARKER = "潜在问题：";
-                    final String SUGGESTIONS_MARKER = "相处建议：";
+                void processFullContent(String content, SseEmitter emitter, boolean[] sectionsSent, Long userId,
+                        String matchNo, SectionMarkers markers) throws IOException {
 
                     // 处理匹配得分
                     if (!sectionsSent[0]) {
-                        int scoreIndex = content.indexOf(SCORE_MARKER);
+                        int scoreIndex = content.indexOf(markers.getScoreMarker());
                         if (scoreIndex >= 0) {
-                            int scoreStart = scoreIndex + SCORE_MARKER.length();
+                            int scoreStart = scoreIndex + markers.getScoreMarker().length();
                             int scoreEnd = content.indexOf('\n', scoreStart);
                             if (scoreEnd > scoreStart) {
                                 String scoreStr = content.substring(scoreStart, scoreEnd).trim();
@@ -249,7 +247,8 @@ public class QwenTurboModelServiceImpl implements AIModelService {
                                 scoreStr = sb.toString();
 
                                 if (!scoreStr.isEmpty()) {
-                                    sendAnalysisSection(emitter, AiAnalysisConstants.AnalysisField.MATCH_SCORE, scoreStr, userId, matchNo);
+                                    sendAnalysisSection(emitter, AiAnalysisConstants.AnalysisField.MATCH_SCORE,
+                                            scoreStr, userId, matchNo);
                                     sectionsSent[0] = true;
                                 }
                             }
@@ -258,28 +257,32 @@ public class QwenTurboModelServiceImpl implements AIModelService {
 
                     // 处理整体分析
                     if (!sectionsSent[1]) {
-                        sectionsSent[1] = processSection(content, ANALYSIS_MARKER, AiAnalysisConstants.AnalysisField.ANALYSIS, emitter, userId, matchNo);
+                        sectionsSent[1] = processSection(content, markers.getAnalysisMarker(),
+                                AiAnalysisConstants.AnalysisField.ANALYSIS, emitter, userId, matchNo);
                     }
 
                     // 处理优势特点
                     if (!sectionsSent[2]) {
-                        sectionsSent[2] = processSection(content, ADVANTAGES_MARKER, AiAnalysisConstants.AnalysisField.ADVANTAGES, emitter, userId, matchNo);
+                        sectionsSent[2] = processSection(content, markers.getAdvantagesMarker(),
+                                AiAnalysisConstants.AnalysisField.ADVANTAGES, emitter, userId, matchNo);
                     }
 
                     // 处理潜在问题
                     if (!sectionsSent[3]) {
-                        sectionsSent[3] = processSection(content, DISADVANTAGES_MARKER, AiAnalysisConstants.AnalysisField.DISADVANTAGES, emitter, userId, matchNo);
+                        sectionsSent[3] = processSection(content, markers.getDisadvantagesMarker(),
+                                AiAnalysisConstants.AnalysisField.DISADVANTAGES, emitter, userId, matchNo);
                     }
 
                     // 处理相处建议
                     if (!sectionsSent[4]) {
-                        sectionsSent[4] = processSection(content, SUGGESTIONS_MARKER, AiAnalysisConstants.AnalysisField.SUGGESTIONS, emitter, userId, matchNo);
+                        sectionsSent[4] = processSection(content, markers.getSuggestionsMarker(),
+                                AiAnalysisConstants.AnalysisField.SUGGESTIONS, emitter, userId, matchNo);
                     }
                 }
 
                 // 提取公共处理逻辑，减少代码重复
                 private boolean processSection(String content, String marker, String eventType,
-                                               SseEmitter emitter, Long userId, String matchNo) throws IOException {
+                        SseEmitter emitter, Long userId, String matchNo) throws IOException {
                     int sectionIndex = content.indexOf(marker);
                     if (sectionIndex >= 0) {
                         int sectionStart = sectionIndex + marker.length();
@@ -292,8 +295,9 @@ public class QwenTurboModelServiceImpl implements AIModelService {
                             // 对于最后一部分，可能没有结束标记，需要判断是否为完整部分
                             sectionText = content.substring(sectionStart).trim();
                             if (!sectionText.endsWith("。") && !sectionText.endsWith("！")
-                                    && !sectionText.endsWith("？")) {
-                                // 如果不是以句号、感叹号或问号结尾，认为不是完整部分，不处理
+                                    && !sectionText.endsWith("？") && !sectionText.endsWith(".")
+                                    && !sectionText.endsWith("!") && !sectionText.endsWith("?")) {
+                                // 如果不是以句号、感叹号或问号结尾（中英文），认为不是完整部分，不处理
                                 return false;
                             }
                         }
@@ -315,26 +319,12 @@ public class QwenTurboModelServiceImpl implements AIModelService {
     }
 
     private String buildPrompt(ZodiacSign sign1, Date person1Birthday, ZodiacSign sign2, Date person2Birthday) {
-        String person1BirthdayStr = DateUtil.format(person1Birthday, "yyyy-MM-dd HH:mm");
-        String person2BirthdayStr = DateUtil.format(person2Birthday, "yyyy-MM-dd HH:mm");
+        return buildPrompt(sign1, person1Birthday, sign2, person2Birthday, LanguageEnum.ZH_CN.getCode());
+    }
 
-        StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append("作为一位专业的占星师，请分析")
-                .append(person1BirthdayStr)
-                .append("出生的人")
-                .append(sign1.getChineseName())
-                .append("和")
-                .append(person2BirthdayStr)
-                .append("出生的人")
-                .append(sign2.getChineseName())
-                .append("的匹配关系。请严格按照以下格式输出：\n\n")
-                .append("匹配得分：[请给出0-100的匹配度评分，评分更细一点不要全是5的倍数，只需要数字]\n\n")
-                .append("整体分析：[从星座特质的角度分析两个星座的整体匹配程度]\n\n")
-                .append("优势特点：[分析两个星座在感情中的互补优势]\n\n")
-                .append("潜在问题：[指出可能存在的性格冲突或沟通障碍]\n\n")
-                .append("相处建议：[给出具体的相处建议和改善方法]\n\n")
-                .append("请确保严格按照以上格式回复，每个部分都要有实质性的内容。");
-        return promptBuilder.toString();
+    private String buildPrompt(ZodiacSign sign1, Date person1Birthday, ZodiacSign sign2, Date person2Birthday,
+            String language) {
+        return promptTemplateUtil.getMatchAnalysisPrompt(sign1, person1Birthday, sign2, person2Birthday, language);
     }
 
     private Map<String, String> parseResponse(String response) {
