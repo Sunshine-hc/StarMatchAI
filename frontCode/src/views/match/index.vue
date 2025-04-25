@@ -1,5 +1,6 @@
 <template>
     <div class="match-container">
+        <LanguageSwitch />
         <div class="starry-background">
             <div class="shooting-star" v-for="n in 5" :key="n"></div>
         </div>
@@ -9,25 +10,25 @@
             <el-card class="match-card form-card">
                 <template #header>
                     <div class="card-header">
-                        <span>AI星座匹配测试</span>
+                        <span>{{ $t('match.title') }}</span>
                     </div>
                 </template>
 
                 <el-form :model="matchForm" :rules="rules" ref="formRef" label-width="100px">
                     <div class="form-item">
-                        <el-form-item label="生日选择" prop="birthdays" :rules="birthdayRules">
+                        <el-form-item :label="$t('match.birthday')" prop="birthdays" :rules="birthdayRules">
                             <div class="birthday-inputs">
                                 <el-form-item prop="person1Birthday">
                                     <DateTimePicker
                                         v-model="matchForm.person1Birthday"
-                                        placeholder="第一个人的生日"
+                                        :placeholder="$t('match.person1Birthday')"
                                     />
                                 </el-form-item>
                                 <span class="multiply-icon">×</span>
                                 <el-form-item prop="person2Birthday">
                                     <DateTimePicker
                                         v-model="matchForm.person2Birthday"
-                                        placeholder="第二个人的生日"
+                                        :placeholder="$t('match.person2Birthday')"
                                     />
                                 </el-form-item>
                             </div>
@@ -35,9 +36,9 @@
                     </div>
 
                     <div class="form-row">
-                        <el-form-item label="AI模型" prop="aiModel">
-                            <el-select v-model="matchForm.aiModel" placeholder="请选择AI模型" class="model-select">
-                                <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label"
+                        <el-form-item :label="$t('match.aiModel')" prop="aiModel">
+                            <el-select v-model="matchForm.aiModel" :placeholder="$t('match.selectModel')" class="model-select">
+                                <el-option v-for="option in aiModelOptions" :key="option.value" :label="$t(`models.${option.value}`)"
                                     :value="option.value" />
                             </el-select>
                         </el-form-item>
@@ -46,7 +47,7 @@
                     <div class="form-row">
                         <el-form-item>
                             <el-button type="primary" @click="handleSubmit" :loading="loading" class="submit-button">
-                                开始匹配
+                                {{ $t('match.startMatch') }}
                             </el-button>
                         </el-form-item>
                     </div>
@@ -60,7 +61,7 @@
                         <div class="galaxy">
                             <div v-for="n in 12" :key="n" class="star"></div>
                         </div>
-                        <p>正在进行星座匹配分析...</p>
+                        <p>{{ $t('match.analyzing') }}</p>
                     </div>
                 </div>
 
@@ -69,7 +70,7 @@
                         <div class="zodiac-pair">
                             <div class="zodiac-item">
                                 <div class="zodiac-icon">{{ getZodiacIcon(matchResult.person1Sign) }}</div>
-                                <div class="zodiac-name">{{ matchResult.person1Sign }}</div>
+                                <div class="zodiac-name">{{ $t(`zodiac.${matchResult.person1Sign}`) }}</div>
                             </div>
                             <div class="match-score">
                                 <div class="score-circle">
@@ -86,14 +87,14 @@
                             </div>
                             <div class="zodiac-item">
                                 <div class="zodiac-icon">{{ getZodiacIcon(matchResult.person2Sign) }}</div>
-                                <div class="zodiac-name">{{ matchResult.person2Sign }}</div>
+                                <div class="zodiac-name">{{ $t(`zodiac.${matchResult.person2Sign}`) }}</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 分析总结部分 -->
                     <div class="summary-section">
-                        <h3 class="section-title">分析总结</h3>
+                        <h3 class="section-title">{{ $t('match.analysis') }}</h3>
                         <div class="summary-content">
                             <div v-if="!displayContent.analysis" class="loading-wrapper">
                                 <div class="loading-container">
@@ -111,7 +112,7 @@
 
                     <div class="details-section">
                         <div class="detail-card">
-                            <h4 class="detail-title">优势特点</h4>
+                            <h4 class="detail-title">{{ $t('match.advantages') }}</h4>
                             <div v-if="!displayContent.advantages" class="loading-wrapper">
                                 <div class="loading-container">
                                     <span class="loading-text">分析中</span>
@@ -126,7 +127,7 @@
                         </div>
 
                         <div class="detail-card">
-                            <h4 class="detail-title">潜在问题</h4>
+                            <h4 class="detail-title">{{ $t('match.disadvantages') }}</h4>
                             <div v-if="!displayContent.disadvantages" class="loading-wrapper">
                                 <div class="loading-container">
                                     <span class="loading-text">分析中</span>
@@ -141,7 +142,7 @@
                         </div>
 
                         <div class="detail-card">
-                            <h4 class="detail-title">相处建议</h4>
+                            <h4 class="detail-title">{{ $t('match.suggestions') }}</h4>
                             <div v-if="!displayContent.suggestions" class="loading-wrapper">
                                 <div class="loading-container">
                                     <span class="loading-text">分析中</span>
@@ -163,10 +164,12 @@
 
 <script setup>
 import { ref, computed, reactive, watch, watchEffect } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { calculateMatchStream } from '@/api/match'
 import { ElMessage } from 'element-plus'
 import DateTimePicker from '@/components/DateTimePicker/index.vue'
 
+const { t } = useI18n()
 const matchFormRef = ref(null)
 const loading = ref(false)
 const showResult = ref(false)
@@ -344,10 +347,10 @@ const handleSubmit = async () => {
     }
 }
 
-// 修改AI模型选项，只保留支持的模型
+// 修改AI模型选项
 const aiModelOptions = [
-    { label: '通义千问-Turbo', value: 'qwen-turbo' },
-    { label: 'DeepSeek', value: 'deepseek-chat' }
+    { label: t('models.qwenTurbo'), value: 'qwen-turbo' },
+    { label: t('models.deepseek'), value: 'deepseek-chat' }
 ]
 
 // 添加星座图标映射

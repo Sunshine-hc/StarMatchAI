@@ -12,11 +12,12 @@ export default defineConfig({
     server: {
         port: 3000,
         allowedHosts: [
-            'frp6.mmszxc.xin'
+            'hcfutureai.top',
+            '117.72.54.188'
         ],
         proxy: {
             '/api': {
-                target: 'http://localhost:8080',
+                target: 'http://117.72.54.188:8080',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api/, '')
             }
