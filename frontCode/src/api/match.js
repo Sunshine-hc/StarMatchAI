@@ -1,22 +1,3 @@
-import request from '@/utils/request'
-
-// 计算星座匹配度
-export function calculateMatch(data) {
-    return request({
-        url: '/starMatchAI/match/calculate',
-        method: 'post',
-        data
-    })
-}
-
-// 获取历史匹配记录
-export function getMatchHistory(data) {
-    return request({
-        url: '/starMatchAI/match/history',
-        method: 'post',
-        data
-    })
-}
 
 // 流式匹配分析
 export function calculateMatchStream(data, onProgress) {

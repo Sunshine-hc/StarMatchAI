@@ -1,6 +1,5 @@
 <template>
     <div class="match-container">
-        <LanguageSwitch />
         <div class="starry-background">
             <div class="shooting-star" v-for="n in 5" :key="n"></div>
         </div>
@@ -98,7 +97,7 @@
                         <div class="summary-content">
                             <div v-if="!displayContent.analysis" class="loading-wrapper">
                                 <div class="loading-container">
-                                    <span class="loading-text">分析中</span>
+                                    <span class="loading-text">{{ $t('match.loading') }}</span>
                                     <div class="loading-dots">
                                         <span></span>
                                         <span></span>
@@ -115,7 +114,7 @@
                             <h4 class="detail-title">{{ $t('match.advantages') }}</h4>
                             <div v-if="!displayContent.advantages" class="loading-wrapper">
                                 <div class="loading-container">
-                                    <span class="loading-text">分析中</span>
+                                    <span class="loading-text">{{ $t('match.loading') }}</span>
                                     <div class="loading-dots">
                                         <span></span>
                                         <span></span>
@@ -130,7 +129,7 @@
                             <h4 class="detail-title">{{ $t('match.disadvantages') }}</h4>
                             <div v-if="!displayContent.disadvantages" class="loading-wrapper">
                                 <div class="loading-container">
-                                    <span class="loading-text">分析中</span>
+                                    <span class="loading-text">{{ $t('match.loading') }}</span>
                                     <div class="loading-dots">
                                         <span></span>
                                         <span></span>
@@ -145,7 +144,7 @@
                             <h4 class="detail-title">{{ $t('match.suggestions') }}</h4>
                             <div v-if="!displayContent.suggestions" class="loading-wrapper">
                                 <div class="loading-container">
-                                    <span class="loading-text">分析中</span>
+                                    <span class="loading-text">{{ $t('match.loading') }}</span>
                                     <div class="loading-dots">
                                         <span></span>
                                         <span></span>

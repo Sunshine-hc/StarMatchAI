@@ -2,24 +2,33 @@
   <header class="app-header">
     <div class="header-container">
       <div class="header-left">
-        <router-link to="/" class="nav-item">星座匹配</router-link>
-        <router-link v-if="isLoggedIn" to="/history" class="nav-item">历史记录</router-link>
+        <router-link to="/" class="nav-item">{{ $t('header.starMatch') }}</router-link>
+        <router-link v-if="isLoggedIn" to="/history" class="nav-item">{{ $t('header.history') }}</router-link>
       </div>
       
       <div class="header-right">
+        <LanguageSwitch />
         <template v-if="isLoggedIn">
-          <div class="user-info">
-            <div class="avatar">
-              {{ userNameFirstChar }}
+          <el-dropdown trigger="click" @command="handleCommand">
+            <div class="user-info">
+              <div class="avatar">
+                {{ userNameFirstChar }}
+              </div>
+              <span class="user-name">{{ userName }}</span>
+              <el-icon class="el-icon--right"><arrow-down /></el-icon>
             </div>
-            <span class="user-name">{{ userName }}</span>
-          </div>
-          <a href="javascript:;" @click="handleLogout" class="logout-btn">退出</a>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">{{ $t('header.profile') }}</el-dropdown-item>
+                <el-dropdown-item command="logout">{{ $t('header.logout') }}</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </template>
         <template v-else>
-          <router-link to="/login" class="login-btn">登录</router-link>
+          <router-link to="/login" class="login-btn">{{ $t('header.login') }}</router-link>
           <span class="divider">/</span>
-          <router-link to="/register" class="register-btn">注册</router-link>
+          <router-link to="/register" class="register-btn">{{ $t('header.register') }}</router-link>
         </template>
       </div>
     </div>
@@ -30,7 +39,11 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { ArrowDown } from '@element-plus/icons-vue';
+import LanguageSwitch from '@/components/LanguageSwitch.vue';
 
+const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
 
@@ -50,7 +63,7 @@ const userName = computed(() => {
   if (!name || name === '用户') {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      name = userInfo.nickname || userInfo.username || userInfo.email || '用户';
+      name = userInfo.nickname || userInfo.username || userInfo.email || t('header.user');
     } catch (e) {
       console.error('Error parsing user info from localStorage:', e);
     }
@@ -62,7 +75,7 @@ const userName = computed(() => {
 
 // 获取用户名的第一个字符作为默认头像
 const userNameFirstChar = computed(() => {
-  return userName.value ? userName.value.charAt(0) : '用';
+  return userName.value ? userName.value.charAt(0) : t('header.userInitial');
 });
 
 // 监听登录状态变化
@@ -74,10 +87,15 @@ watch(() => isLoggedIn.value, (newVal) => {
   }
 });
 
-const handleLogout = () => {
-  console.log('Logging out...');
-  store.dispatch('user/logout');
-  router.push('/login');
+const handleCommand = (command) => {
+  if (command === 'logout') {
+    console.log('Logging out...');
+    store.dispatch('user/logout');
+    router.push('/login');
+  } else if (command === 'profile') {
+    // 跳转到个人中心页面
+    router.push('/profile');
+  }
 };
 
 // 初始化时检查登录状态
@@ -133,7 +151,14 @@ onMounted(() => {
 .user-info {
   display: flex;
   align-items: center;
-  margin-right: 15px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.user-info:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .avatar {
@@ -153,9 +178,10 @@ onMounted(() => {
 .user-name {
   color: #ffffff;
   font-size: 14px;
+  margin-right: 5px;
 }
 
-.logout-btn, .login-btn, .register-btn {
+.login-btn, .register-btn {
   color: #00FF88;
   text-decoration: none;
   cursor: pointer;
@@ -163,12 +189,33 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.logout-btn:hover, .login-btn:hover, .register-btn:hover {
+.login-btn:hover, .register-btn:hover {
   opacity: 0.8;
 }
 
 .divider {
   color: rgba(255, 255, 255, 0.5);
   margin: 0 8px;
+}
+
+:deep(.el-dropdown-menu) {
+  background-color: rgba(42, 47, 79, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+:deep(.el-dropdown-menu__item) {
+  color: #FFFFFF !important;
+}
+
+:deep(.el-dropdown-menu__item:hover) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #00FF88 !important;
+}
+
+:deep(.el-icon--right) {
+  color: #FFFFFF;
+  font-size: 12px;
+  margin-left: 5px;
 }
 </style> 
