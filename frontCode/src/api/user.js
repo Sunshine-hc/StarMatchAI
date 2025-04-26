@@ -4,7 +4,7 @@ import { ref, reactive, onBeforeUnmount } from 'vue';
 // 用户注册
 export function register(data) {
     return request({
-        url: '/api/user/register',
+        url: '/user/register',
         method: 'post',
         data
     })
@@ -36,7 +36,7 @@ export function sendVerificationCode(data) {
     };
 
     return request({
-        url: '/api/user/send-code',
+        url: '/user/send-code',
         method: 'post',
         data: requestData
     });

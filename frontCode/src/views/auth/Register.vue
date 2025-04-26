@@ -157,7 +157,7 @@ const sendCode = async () => {
     // 调用发送验证码API
     const response = await sendVerificationCode({
       email: registerForm.email,
-      type: 1  // 使用数字1表示注册类型
+      type: 'register'  // 使用数字1表示注册类型
     });
     
     console.log('验证码发送响应:', response);
