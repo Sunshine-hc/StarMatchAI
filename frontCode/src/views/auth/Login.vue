@@ -8,7 +8,7 @@
       <el-card class="login-card">
         <template #header>
           <div class="card-header">
-            <span>AI星座匹配 - 登录</span>
+            <span>{{ $t('auth.login.title') }}</span>
           </div>
         </template>
 
@@ -17,7 +17,7 @@
             <el-form-item prop="email">
               <el-input 
                 v-model="loginForm.email" 
-                placeholder="邮箱" 
+                :placeholder="$t('auth.login.email')" 
                 class="custom-input"
               ></el-input>
             </el-form-item>
@@ -28,7 +28,7 @@
               <el-input 
                 v-model="loginForm.password" 
                 type="password" 
-                placeholder="密码" 
+                :placeholder="$t('auth.login.password')" 
                 show-password 
                 class="custom-input"
               ></el-input>
@@ -38,14 +38,14 @@
           <div class="form-row">
             <el-form-item>
               <el-button type="primary" @click="handleLogin" :loading="loading" class="submit-button">
-                登录
+                {{ $t('auth.login.submit') }}
               </el-button>
             </el-form-item>
           </div>
 
           <div class="form-footer">
-            <span>还没有账号？</span>
-            <router-link to="/register" class="register-link">立即注册</router-link>
+            <span>{{ $t('auth.login.noAccount') }}</span>
+            <router-link to="/register" class="register-link">{{ $t('auth.login.register') }}</router-link>
           </div>
         </el-form>
       </el-card>
@@ -58,7 +58,9 @@ import { ref, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { ElMessage } from 'element-plus';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
 const route = useRoute();
@@ -72,12 +74,12 @@ const loginForm = reactive({
 
 const rules = {
   email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+    { required: true, message: t('auth.validation.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('auth.validation.emailValid'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    { required: true, message: t('auth.validation.passwordRequired'), trigger: 'blur' },
+    { min: 6, message: t('auth.validation.passwordLength'), trigger: 'blur' }
   ]
 };
 

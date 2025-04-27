@@ -47,6 +47,39 @@ export default {
         deleteFailed: '删除失败',
         deleteFailedRetry: '删除失败，请稍后重试'
     },
+    auth: {
+        login: {
+            title: 'AI星座匹配 - 登录',
+            email: '邮箱',
+            password: '密码',
+            submit: '登录',
+            noAccount: '还没有账号？',
+            register: '立即注册'
+        },
+        register: {
+            title: 'AI星座匹配 - 注册',
+            email: '邮箱',
+            code: '验证码',
+            getCode: '获取验证码',
+            seconds: '秒',
+            password: '密码',
+            confirmPassword: '确认密码',
+            nickname: '昵称（选填）',
+            submit: '注册',
+            hasAccount: '已有账号？',
+            login: '立即登录'
+        },
+        validation: {
+            emailRequired: '请输入邮箱地址',
+            emailValid: '请输入正确的邮箱地址',
+            passwordRequired: '请输入密码',
+            passwordLength: '密码长度不能少于6位',
+            confirmPasswordRequired: '请再次输入密码',
+            passwordMismatch: '两次输入密码不一致!',
+            codeRequired: '请输入验证码',
+            codeLength: '验证码长度为6位'
+        }
+    },
     match: {
         title: 'AI星座匹配测试',
         birthday: '生日选择',

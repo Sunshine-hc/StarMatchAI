@@ -47,6 +47,39 @@ export default {
         deleteFailed: 'Delete failed',
         deleteFailedRetry: 'Delete failed, please try again later'
     },
+    auth: {
+        login: {
+            title: 'Zodiac Match - Login',
+            email: 'Email',
+            password: 'Password',
+            submit: 'Login',
+            noAccount: 'No account yet?',
+            register: 'Register Now'
+        },
+        register: {
+            title: 'Zodiac Match - Register',
+            email: 'Email',
+            code: 'Verification Code',
+            getCode: 'Get Code',
+            seconds: 's',
+            password: 'Password',
+            confirmPassword: 'Confirm Password',
+            nickname: 'Nickname (Optional)',
+            submit: 'Register',
+            hasAccount: 'Already have an account?',
+            login: 'Login Now'
+        },
+        validation: {
+            emailRequired: 'Please input your email',
+            emailValid: 'Please input a valid email',
+            passwordRequired: 'Please input your password',
+            passwordLength: 'Password must be at least 6 characters',
+            confirmPasswordRequired: 'Please confirm your password',
+            passwordMismatch: 'The two passwords do not match!',
+            codeRequired: 'Please input verification code',
+            codeLength: 'Verification code must be 6 characters'
+        }
+    },
     match: {
         title: 'AI Zodiac Match Test',
         birthday: 'Birthday Selection',

@@ -8,7 +8,7 @@
       <el-card class="register-card">
         <template #header>
           <div class="card-header">
-            <span>AI星座匹配 - 注册</span>
+            <span>{{ $t('auth.register.title') }}</span>
           </div>
         </template>
 
@@ -17,7 +17,7 @@
             <el-form-item prop="email">
               <el-input 
                 v-model="registerForm.email" 
-                placeholder="邮箱" 
+                :placeholder="$t('auth.register.email')" 
                 class="custom-input has-append"
               >
                 <template #append>
@@ -27,7 +27,7 @@
                     :loading="sendingCode"
                     class="code-button"
                   >
-                    {{ cooldown > 0 ? `${cooldown}秒` : '获取验证码' }}
+                    {{ cooldown > 0 ? `${cooldown}${$t('auth.register.seconds')}` : $t('auth.register.getCode') }}
                   </el-button>
                 </template>
               </el-input>
@@ -38,7 +38,7 @@
             <el-form-item prop="code">
               <el-input 
                 v-model="registerForm.code" 
-                placeholder="验证码" 
+                :placeholder="$t('auth.register.code')" 
                 class="custom-input"
               ></el-input>
             </el-form-item>
@@ -46,33 +46,33 @@
 
           <div class="form-row">
             <el-form-item prop="password">
-              <el-input v-model="registerForm.password" type="password" placeholder="密码" show-password class="custom-input"></el-input>
+              <el-input v-model="registerForm.password" type="password" :placeholder="$t('auth.register.password')" show-password class="custom-input"></el-input>
             </el-form-item>
           </div>
 
           <div class="form-row">
             <el-form-item prop="confirmPassword">
-              <el-input v-model="registerForm.confirmPassword" type="password" placeholder="确认密码" show-password class="custom-input"></el-input>
+              <el-input v-model="registerForm.confirmPassword" type="password" :placeholder="$t('auth.register.confirmPassword')" show-password class="custom-input"></el-input>
             </el-form-item>
           </div>
 
           <div class="form-row">
             <el-form-item prop="nickname">
-              <el-input v-model="registerForm.nickname" placeholder="昵称（选填）" class="custom-input"></el-input>
+              <el-input v-model="registerForm.nickname" :placeholder="$t('auth.register.nickname')" class="custom-input"></el-input>
             </el-form-item>
           </div>
 
           <div class="form-row">
             <el-form-item>
               <el-button type="primary" @click="handleRegister" :loading="loading" class="submit-button">
-                注册
+                {{ $t('auth.register.submit') }}
               </el-button>
             </el-form-item>
           </div>
 
           <div class="form-footer">
-            <span>已有账号？</span>
-            <router-link to="/login" class="login-link">立即登录</router-link>
+            <span>{{ $t('auth.register.hasAccount') }}</span>
+            <router-link to="/login" class="login-link">{{ $t('auth.register.login') }}</router-link>
           </div>
         </el-form>
       </el-card>
@@ -85,7 +85,9 @@ import { ref, reactive, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { register, sendVerificationCode } from '@/api/user';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const router = useRouter();
 const registerFormRef = ref(null);
 const loading = ref(false);
@@ -103,7 +105,7 @@ const registerForm = reactive({
 
 const validatePass = (rule, value, callback) => {
   if (value === '') {
-    callback(new Error('请输入密码'));
+    callback(new Error(t('auth.validation.passwordRequired')));
   } else {
     if (registerForm.confirmPassword !== '') {
       registerFormRef.value.validateField('confirmPassword');
@@ -114,9 +116,9 @@ const validatePass = (rule, value, callback) => {
 
 const validatePass2 = (rule, value, callback) => {
   if (value === '') {
-    callback(new Error('请再次输入密码'));
+    callback(new Error(t('auth.validation.confirmPasswordRequired')));
   } else if (value !== registerForm.password) {
-    callback(new Error('两次输入密码不一致!'));
+    callback(new Error(t('auth.validation.passwordMismatch')));
   } else {
     callback();
   }
@@ -124,24 +126,24 @@ const validatePass2 = (rule, value, callback) => {
 
 const rules = {
   email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+    { required: true, message: t('auth.validation.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('auth.validation.emailValid'), trigger: 'blur' }
   ],
   code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    { min: 6, max: 6, message: '验证码长度为6位', trigger: 'blur' }
+    { required: true, message: t('auth.validation.codeRequired'), trigger: 'blur' },
+    { min: 6, max: 6, message: t('auth.validation.codeLength'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+    { required: true, message: t('auth.validation.passwordRequired'), trigger: 'blur' },
+    { min: 6, message: t('auth.validation.passwordLength'), trigger: 'blur' },
     { validator: validatePass, trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    { required: true, message: t('auth.validation.confirmPasswordRequired'), trigger: 'blur' },
     { validator: validatePass2, trigger: 'blur' }
   ],
   nickname: [
-    { required: false, message: '请输入昵称', trigger: 'blur' }
+    { required: false }
   ]
 };
 

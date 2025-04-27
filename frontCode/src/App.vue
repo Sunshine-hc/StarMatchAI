@@ -4,6 +4,7 @@
     <main class="main-content">
       <router-view />
     </main>
+    <AppFooter />
   </div>
 </template>
 
@@ -11,6 +12,7 @@
 import { onMounted } from 'vue';
 import { useStore } from 'vuex';
 import AppHeader from '@/components/AppHeader.vue';
+import AppFooter from '@/layout/components/AppFooter.vue';
 
 const store = useStore();
 
