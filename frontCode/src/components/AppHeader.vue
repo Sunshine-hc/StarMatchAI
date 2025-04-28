@@ -50,14 +50,14 @@ const router = useRouter();
 // 从Vuex和localStorage双重检查登录状态
 const isLoggedIn = computed(() => {
   const hasToken = !!localStorage.getItem('token');
-  const storeLoggedIn = store.getters.isLoggedIn;
+  const storeLoggedIn = store.getters['user/isLoggedIn'];
   console.log('Login status check - localStorage:', hasToken, 'Vuex:', storeLoggedIn);
   return hasToken || storeLoggedIn;
 });
 
 // 从Vuex和localStorage获取用户名
 const userName = computed(() => {
-  let name = store.getters.userName;
+  let name = store.getters['user/userName'];
   
   // 如果Vuex中没有用户名，尝试从localStorage获取
   if (!name || name === '用户') {
@@ -85,7 +85,12 @@ watch(() => isLoggedIn.value, (newVal) => {
     // 登录状态变为true时，尝试获取用户信息
     store.dispatch('user/fetchUserInfo');
   }
-});
+}, { immediate: true });
+
+// 监听用户信息变化
+watch(() => store.state.user.userInfo, (newVal) => {
+  console.log('User info changed:', newVal);
+}, { deep: true });
 
 const handleCommand = (command) => {
   if (command === 'logout') {

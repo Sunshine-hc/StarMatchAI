@@ -11,10 +11,6 @@ export default defineConfig({
     },
     server: {
         port: 3000,
-        allowedHosts: [
-            'hcfutureai.top',
-            '117.72.54.188'
-        ],
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',

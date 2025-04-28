@@ -144,10 +144,16 @@ const handleLogin = async () => {
             console.log('Token in Vuex after login:', store.state.user.token);
             console.log('User info in Vuex after login:', store.state.user.userInfo);
             
-            ElMessage.success('登录成功');
-            
-            const redirectPath = route.query.redirect || '/';
-            router.push(redirectPath);
+            store.dispatch('user/fetchUserInfo').then(() => {
+              ElMessage.success('登录成功');
+              const redirectPath = route.query.redirect || '/';
+              router.push(redirectPath);
+            }).catch(error => {
+              console.error('Failed to fetch user info after login:', error);
+              ElMessage.error('登录成功，但获取用户信息失败');
+              const redirectPath = route.query.redirect || '/';
+              router.push(redirectPath);
+            });
           })
           .catch(() => {
             // 错误处理已在请求拦截器中完成
